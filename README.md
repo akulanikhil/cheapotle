@@ -25,13 +25,16 @@ Prices genuinely vary by location (sometimes by over **$1.50**). Cheapotle helps
 ## Features
 
 - 🗺 **Live map** — MapLibre GL JS with OpenFreeMap tiles (no API key needed)
-- 💰 **Real pricing** — pulled server-side from `services.chipotle.com` on every request
+- 🔍 **Address/ZIP search** — geocode any city, address, or ZIP to find stores there
 - 📍 **Your location** — browser Geolocation API, distances via Haversine formula
+- 🗺 **Map-based searching** — pan the map and tap "Search this area" to find stores anywhere
+- 💰 **Real pricing** — pulled server-side from `services.chipotle.com` on every request
+- ⚡ **Progressive loading** — 10 closest stores priced immediately, rest load in the background
 - ⭐ **Cheapest highlighted** — distinct green marker + badge on the best deal
 - 🚗 **Pickup & delivery prices** — both shown per location
 - 🔀 **Sort by price or distance** — toggle between the two
-- ⚡ **5-minute server cache** — fast repeat loads, no hammering the API
-- 🛡 **Graceful fallback** — hardcoded prices kick in if the API is unreachable
+- 🖼 **Store photos** — real Google Places photos (optional) or food imagery fallback
+- 🛡 **Graceful fallback** — estimated prices shown when API is unreachable
 - 📱 **Mobile-first** — full-height layout, scrollable card list beneath the map
 
 ---
@@ -39,26 +42,24 @@ Prices genuinely vary by location (sometimes by over **$1.50**). Cheapotle helps
 ## How it works
 
 ```
-Browser (Geolocation API)
+Browser (Geolocation / Search)
         │
         ▼
-Next.js frontend ──fetch──▶ /api/prices  (Next.js API Route)
-                                   │
-           ┌───────────────────────┼───────────────────────┐
-           ▼                       ▼                       ▼
-      store #499              store #545              store #572  ...
-     (UK Campus)           (Hamburg Place)          (Richmond Rd)
-           │                       │                       │
-           └───────────────────────┴───────────────────────┘
-                                   │
-                     services.chipotle.com
-                     /menuinnovation/v1/restaurants/{id}/onlinemenu
-                                   │
-                         entrees[] → find "Chicken Bowl"
-                         extract unitPrice + unitDeliveryPrice
-                                   │
-           ◀──────────────────── JSON ──────────────────────
-           { price, deliveryPrice, isLive: true }
+Next.js frontend ──fetch──▶ /api/geocode     (Nominatim — address → lat/lng)
+                        ──fetch──▶ /api/stores     (Chipotle restaurant search)
+                                       │
+                              returns ~40 stores sorted by distance
+                                       │
+                        ──fetch──▶ /api/price/[storeId]   (per-store, parallel)
+                                       │
+                             services.chipotle.com
+                             /menuinnovation/v1/restaurants/{id}/onlinemenu
+                                       │
+                               entrees[] → "Chicken Bowl"
+                               extract unitPrice + unitDeliveryPrice
+                                       │
+                   ◀──────────────── JSON ──────────────────
+                   { price, deliveryPrice, isLive: true }
 ```
 
 The subscription key is embedded publicly in Chipotle's own frontend JS bundle (`orderweb-cdn.chipotle.com/js/app.js`). No scraping, no auth, no reverse engineering.
@@ -72,6 +73,8 @@ The subscription key is embedded publicly in Chipotle's own frontend JS bundle (
 | Framework | [Next.js 16](https://nextjs.org) (App Router) |
 | Styling | [Tailwind CSS 4](https://tailwindcss.com) |
 | Map | [MapLibre GL JS](https://maplibre.org) + [OpenFreeMap](https://openfreemap.org) tiles |
+| Geocoding | [Nominatim](https://nominatim.org) (OpenStreetMap, free, no key) |
+| Store images | Google Places API (optional) with Unsplash fallback |
 | Language | TypeScript 5 |
 | Pricing data | Chipotle's internal menu API |
 | Deployment | Vercel / any Node.js host |
@@ -81,15 +84,28 @@ The subscription key is embedded publicly in Chipotle's own frontend JS bundle (
 ## Getting started
 
 ```bash
-git clone https://github.com/nikhilakula/cheapotle.git
+git clone https://github.com/akulanikhil/cheapotle.git
 cd cheapotle
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), click **Use My Location**, and see live prices.
+Open [http://localhost:3000](http://localhost:3000) and either:
+- Click **Use My Location** to find stores near you, or
+- Type any city, address, or ZIP code in the search bar
 
-> **No API keys required.** The map uses [OpenFreeMap](https://openfreemap.org) (free, no signup) and pricing uses Chipotle's public-facing menu API.
+> **No API keys required.** The map uses [OpenFreeMap](https://openfreemap.org) (free, no signup), geocoding uses [Nominatim](https://nominatim.org) (free, no signup), and pricing uses Chipotle's public-facing menu API.
+
+### Optional: Real store photos
+
+Add a Google Places API key to get actual Chipotle storefront photos:
+
+```bash
+# .env.local
+GOOGLE_PLACES_API_KEY=your_key_here
+```
+
+Without it, the app uses deterministic food photography from Unsplash — no broken images.
 
 ---
 
@@ -98,24 +114,42 @@ Open [http://localhost:3000](http://localhost:3000), click **Use My Location**, 
 ```
 cheapotle/
 ├── app/
-│   ├── page.tsx                   # Main UI — splash, map, card list, sort
+│   ├── page.tsx                      # Main UI — search, map, card list, sort
 │   ├── components/
-│   │   ├── Map.tsx                # MapLibre GL map with custom markers
-│   │   └── LocationCard.tsx       # Price card with live/cheapest badges
+│   │   ├── Map.tsx                   # MapLibre GL map, markers, "Search this area"
+│   │   ├── LocationCard.tsx          # Price card with live/cheapest badges + skeleton
+│   │   └── SearchBar.tsx             # Geocoding input with loading/error states
 │   └── api/
-│       └── prices/
-│           └── route.ts           # Server-side Chipotle API + 5-min cache
+│       ├── stores/route.ts           # Dynamic Chipotle store discovery by lat/lng
+│       ├── price/[storeId]/route.ts  # Per-store pricing with 5-min cache
+│       ├── geocode/route.ts          # Nominatim address → lat/lng wrapper
+│       ├── store-image/route.ts      # Google Places image proxy + fallback
+│       └── prices/route.ts           # (legacy) combined stores+prices endpoint
 ├── lib/
-│   ├── mockData.ts                # Fallback locations (Lexington, KY)
-│   └── haversine.ts               # Great-circle distance formula
+│   ├── mockData.ts                   # Fallback locations for API outages
+│   └── haversine.ts                  # Great-circle distance formula
 └── README.md
 ```
 
 ---
 
-## Adding your city
+## API reference
 
-Update `LEXINGTON_STORES` in `app/api/prices/route.ts` with your local store IDs. Find them using Chipotle's restaurant search API:
+### `GET /api/stores?lat=41.88&lng=-87.63`
+Returns up to ~60 Chipotle locations near a coordinate (multi-page fetch, 5-min cache).
+
+### `GET /api/price/499`
+Returns `{ price, deliveryPrice, isLive }` for a single store (5-min cache).
+
+### `GET /api/geocode?q=Chicago+IL`
+Returns `{ lat, lng, displayName }` via Nominatim (US + CA only).
+
+### `GET /api/store-image?storeId=499&name=Chipotle+North+Bridge&address=...`
+Returns `{ imageUrl }` — Google Places photo when key is set, Unsplash placeholder otherwise.
+
+---
+
+## Finding store IDs manually
 
 ```bash
 curl -s -X POST https://services.chipotle.com/restaurant/v3/restaurant \
@@ -125,15 +159,14 @@ curl -s -X POST https://services.chipotle.com/restaurant/v3/restaurant \
     "latitude": YOUR_LAT,
     "longitude": YOUR_LNG,
     "radius": 25,
-    "restaurantStatuses": ["OPEN", "LAB"],
     "conceptIds": ["CMG"],
     "orderBy": "distance",
-    "pageSize": 10,
+    "pageSize": 20,
     "pageIndex": 0
-  }' | jq '[.data[] | { id: .restaurantNumber, name: .name, address: .address }]'
+  }' | jq '[.data[] | { id: .restaurantNumber, name: .name }]'
 ```
 
-Then fetch its menu to confirm the Chicken Bowl price:
+Fetch a store's menu to confirm the Chicken Bowl price:
 
 ```bash
 curl -s \
@@ -152,7 +185,7 @@ npm i -g vercel
 vercel
 ```
 
-The `/api/prices` route runs as a serverless function. The 5-minute in-memory cache works per-instance (good enough for personal/small traffic use).
+The API routes run as serverless functions. The 5-minute in-memory cache works per-instance (good enough for personal/small traffic use). For production scale, swap the in-memory maps for Redis.
 
 ---
 
