@@ -178,17 +178,6 @@ curl -s \
 
 ---
 
-## Deploying to Vercel
-
-```bash
-npm i -g vercel
-vercel
-```
-
-The API routes run as serverless functions. The 5-minute in-memory cache works per-instance (good enough for personal/small traffic use). For production scale, swap the in-memory maps for Redis.
-
----
-
 ## Caveats
 
 - Prices reflect **in-store pickup** from Chipotle's ordering API and may differ from walk-in menu prices.
