@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { StoreLocation } from "@/app/api/stores/route";
 import { PriceData } from "@/app/api/price/[storeId]/route";
 import { FOOD_IMAGES } from "@/lib/images";
@@ -32,6 +33,8 @@ export default function LocationCard({
   onHover,
   onHoverEnd,
 }: LocationCardProps) {
+  const [imgSrc, setImgSrc] = useState(store.image);
+
   return (
     <button
       onClick={onClick}
@@ -50,14 +53,12 @@ export default function LocationCard({
       {/* Image */}
       <div className="relative w-28 shrink-0 self-stretch bg-gray-100">
         <Image
-          src={store.image}
+          src={imgSrc}
           alt={store.name}
           fill
           className="object-cover"
           sizes="112px"
-          onError={(e) => {
-            (e.target as HTMLImageElement).src = FOOD_IMAGES.default;
-          }}
+          onError={() => setImgSrc(FOOD_IMAGES.default)}
         />
         {/* Rank badge */}
         <div
