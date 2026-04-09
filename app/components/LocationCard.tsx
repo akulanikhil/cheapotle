@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { ChipotleLocation } from "@/lib/mockData";
+import { StoreLocation } from "@/app/api/stores/route";
+import { PriceData } from "@/app/api/price/[storeId]/route";
 
 interface LocationCardProps {
-  location: ChipotleLocation;
+  store: StoreLocation;
+  price: PriceData | undefined;
+  priceLoading: boolean;
   distance: number;
   rank: number;
   isCheapest: boolean;
@@ -13,7 +16,9 @@ interface LocationCardProps {
 }
 
 export default function LocationCard({
-  location,
+  store,
+  price,
+  priceLoading,
   distance,
   rank,
   isCheapest,
@@ -32,20 +37,23 @@ export default function LocationCard({
       } bg-white`}
     >
       {/* Image */}
-      <div className="relative w-28 shrink-0 self-stretch">
+      <div className="relative w-28 shrink-0 self-stretch bg-gray-100">
         <Image
-          src={location.image}
-          alt={location.name}
+          src={store.image}
+          alt={store.name}
           fill
           className="object-cover"
           sizes="112px"
+          onError={(e) => {
+            // Fallback if image fails
+            (e.target as HTMLImageElement).src =
+              "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&q=80";
+          }}
         />
-        {/* Rank pill */}
+        {/* Rank badge */}
         <div
           className={`absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow ${
-            isCheapest
-              ? "bg-green-500 text-white"
-              : "bg-white/90 text-gray-600"
+            isCheapest ? "bg-green-500 text-white" : "bg-white/90 text-gray-600"
           }`}
         >
           {rank}
@@ -57,49 +65,59 @@ export default function LocationCard({
         <div>
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-semibold text-gray-900 text-sm leading-snug truncate">
-              {location.name}
+              {store.name}
             </h3>
-            {isCheapest && (
+            {isCheapest && price && (
               <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
                 ⭐ Cheapest
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{location.address}</p>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">{store.address}</p>
         </div>
 
         <div className="flex items-end justify-between mt-2">
+          {/* Price */}
           <div>
-            <div className="flex items-baseline gap-1.5 flex-wrap">
-              <span
-                className={`text-2xl font-extrabold tracking-tight ${
-                  isCheapest ? "text-green-600" : "text-gray-800"
-                }`}
-              >
-                ${location.price.toFixed(2)}
-              </span>
-              {location.isLive && (
-                <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">
-                  live
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-xs text-gray-400">pickup</span>
-              {location.deliveryPrice && (
-                <>
-                  <span className="text-xs text-gray-300">·</span>
-                  <span className="text-xs text-gray-400">
-                    ${location.deliveryPrice.toFixed(2)} delivery
+            {priceLoading || !price ? (
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-16 bg-gray-100 rounded animate-pulse" />
+                <span className="text-xs text-gray-400">Loading price…</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1.5 flex-wrap">
+                  <span
+                    className={`text-2xl font-extrabold tracking-tight ${
+                      isCheapest ? "text-green-600" : "text-gray-800"
+                    }`}
+                  >
+                    ${price.price.toFixed(2)}
                   </span>
-                </>
-              )}
-            </div>
+                  {price.isLive && (
+                    <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">
+                      live
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span className="text-xs text-gray-400">pickup</span>
+                  {price.deliveryPrice > 0 && (
+                    <>
+                      <span className="text-xs text-gray-300">·</span>
+                      <span className="text-xs text-gray-400">
+                        ${price.deliveryPrice.toFixed(2)} delivery
+                      </span>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-          <div className="text-right">
-            <span className="text-sm font-medium text-gray-600">
-              {distance.toFixed(1)}
-            </span>
+
+          {/* Distance */}
+          <div className="text-right shrink-0">
+            <span className="text-sm font-medium text-gray-600">{distance.toFixed(1)}</span>
             <span className="text-xs text-gray-400 ml-0.5">mi</span>
           </div>
         </div>
