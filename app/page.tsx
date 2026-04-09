@@ -4,9 +4,12 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { StoreLocation } from "@/app/api/stores/route";
 import { PriceData } from "@/app/api/price/[storeId]/route";
+import { PROTEINS, type Protein } from "@/lib/proteins";
 import { haversineDistance } from "@/lib/haversine";
 import LocationCard from "./components/LocationCard";
 import SearchBar from "./components/SearchBar";
+import ProteinSelector from "./components/ProteinSelector";
+import StoreDetailPanel from "./components/StoreDetailPanel";
 import type { MapHandle } from "./components/Map";
 
 const ChipotleMap = dynamic(() => import("./components/Map"), { ssr: false });
@@ -25,18 +28,16 @@ export default function Home() {
   const [appStatus, setAppStatus] = useState<AppStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // User's physical GPS position — drives the blue dot only
   const [userGPS, setUserGPS] = useState<Location | null>(null);
-
-  // Current search center — drives store fetching, map center, distance calc
   const [searchCenter, setSearchCenter] = useState<Location | null>(null);
 
-  // Stores + prices (separate so locations render immediately)
   const [stores, setStores] = useState<StoreLocation[]>([]);
-  const [prices, setPrices] = useState<Record<number, PriceData>>({});
-  const [loadingPriceIds, setLoadingPriceIds] = useState<Set<number>>(new Set());
+  // keyed by `${storeId}-${protein}`
+  const [prices, setPrices] = useState<Record<string, PriceData>>({});
+  const [loadingPriceKeys, setLoadingPriceKeys] = useState<Set<string>>(new Set());
 
-  // UI
+  const [selectedProtein, setSelectedProtein] = useState<Protein>("chicken");
+  const [detailStore, setDetailStore] = useState<StoreLocation | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>("price");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -48,9 +49,13 @@ export default function Home() {
   const listRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
-
-  // True once we've had at least one successful load — keeps map mounted during re-loads
   const hasLoadedOnce = useRef(false);
+
+  // Stable refs to avoid stale closures
+  const pricesRef = useRef<Record<string, PriceData>>({});
+  useEffect(() => { pricesRef.current = prices; }, [prices]);
+  const selectedProteinRef = useRef<Protein>("chicken");
+  useEffect(() => { selectedProteinRef.current = selectedProtein; }, [selectedProtein]);
 
   // ── "Updated X min ago" ticker ────────────────────────────────────────────
   useEffect(() => {
@@ -68,48 +73,76 @@ export default function Home() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [selectedId]);
 
-  // ── Progressive price fetching ────────────────────────────────────────────
-  const fetchPrice = useCallback(async (storeId: number) => {
+  // ── Price fetching ────────────────────────────────────────────────────────
+  const fetchPrice = useCallback(async (
+    storeId: number,
+    protein: Protein,
+    removeIfNotLive = false
+  ) => {
+    const key = `${storeId}-${protein}`;
     try {
-      const res = await fetch(`/api/price/${storeId}`);
+      const res = await fetch(`/api/price/${storeId}?protein=${protein}`);
       if (!res.ok) return;
       const data: PriceData = await res.json();
       if (!data.isLive) {
-        // Store has no online ordering — remove it entirely
-        setStores((prev) => prev.filter((s) => s.id !== storeId));
+        if (removeIfNotLive) {
+          setStores((prev) => prev.filter((s) => s.id !== storeId));
+        }
         return;
       }
-      setPrices((prev) => ({ ...prev, [storeId]: data }));
+      setPrices((prev) => ({ ...prev, [key]: data }));
     } finally {
-      setLoadingPriceIds((prev) => {
+      setLoadingPriceKeys((prev) => {
         const next = new Set(prev);
-        next.delete(storeId);
+        next.delete(key);
         return next;
       });
     }
   }, []);
 
   const fetchPricesProgressively = useCallback(
-    async (storeList: StoreLocation[], refLat: number, refLng: number) => {
+    async (
+      storeList: StoreLocation[],
+      refLat: number,
+      refLng: number,
+      protein: Protein,
+      removeIfNotLive = false
+    ) => {
       const sorted = [...storeList].sort(
         (a, b) =>
           haversineDistance(refLat, refLng, a.lat, a.lng) -
           haversineDistance(refLat, refLng, b.lat, b.lng)
       );
 
-      setLoadingPriceIds(new Set(sorted.map((s) => s.id)));
+      // Skip already-cached
+      const toFetch = sorted.filter((s) => !pricesRef.current[`${s.id}-${protein}`]);
 
-      const first = sorted.slice(0, 10);
-      const rest = sorted.slice(10);
+      setLoadingPriceKeys((prev) => {
+        const next = new Set(prev);
+        toFetch.forEach((s) => next.add(`${s.id}-${protein}`));
+        return next;
+      });
 
-      await Promise.allSettled(first.map((s) => fetchPrice(s.id)));
+      const first = toFetch.slice(0, 10);
+      const rest = toFetch.slice(10);
 
+      await Promise.allSettled(first.map((s) => fetchPrice(s.id, protein, removeIfNotLive)));
       if (rest.length > 0) {
-        await Promise.allSettled(rest.map((s) => fetchPrice(s.id)));
+        await Promise.allSettled(rest.map((s) => fetchPrice(s.id, protein, removeIfNotLive)));
       }
     },
     [fetchPrice]
   );
+
+  const fetchAllProteinsForStore = useCallback(async (storeId: number) => {
+    const toFetch = PROTEINS.filter((p) => !pricesRef.current[`${storeId}-${p}`]);
+    setLoadingPriceKeys((prev) => {
+      const next = new Set(prev);
+      toFetch.forEach((p) => next.add(`${storeId}-${p}`));
+      return next;
+    });
+    await Promise.allSettled(toFetch.map((p) => fetchPrice(storeId, p)));
+  }, [fetchPrice]);
 
   // ── Store search ──────────────────────────────────────────────────────────
   const searchStores = useCallback(
@@ -117,7 +150,7 @@ export default function Home() {
       setAppStatus("loading");
       setShowSearchAreaButton(false);
       setSelectedId(null);
-      setHoveredId(null);
+      setDetailStore(null);
       setPrices({});
 
       try {
@@ -140,7 +173,14 @@ export default function Home() {
 
         mapRef.current?.flyTo(location.lat, location.lng, 12);
 
-        fetchPricesProgressively(storeList, location.lat, location.lng);
+        // Fetch prices for current protein, removing stores without online ordering
+        fetchPricesProgressively(
+          storeList,
+          location.lat,
+          location.lng,
+          selectedProteinRef.current,
+          true
+        );
       } catch (err) {
         console.error(err);
         setErrorMsg("Failed to fetch locations. Please try again.");
@@ -150,7 +190,32 @@ export default function Home() {
     [fetchPricesProgressively]
   );
 
-  // ── Get user GPS location ─────────────────────────────────────────────────
+  // ── Protein change ────────────────────────────────────────────────────────
+  const handleProteinChange = useCallback(
+    (protein: Protein) => {
+      setSelectedProtein(protein);
+      if (stores.length > 0 && searchCenter) {
+        fetchPricesProgressively(stores, searchCenter.lat, searchCenter.lng, protein);
+      }
+    },
+    [stores, searchCenter, fetchPricesProgressively]
+  );
+
+  // ── Store click (card or marker) ──────────────────────────────────────────
+  const handleStoreSelect = useCallback(
+    (storeId: number, storeList?: (StoreLocation & { distance: number })[]) => {
+      setSelectedId((prev) => (prev === storeId ? null : storeId));
+      const store = (storeList ?? []).find((s) => s.id === storeId);
+      if (store) {
+        setDetailStore(store);
+        mapRef.current?.flyTo(store.lat, store.lng, 14);
+        fetchAllProteinsForStore(storeId);
+      }
+    },
+    [fetchAllProteinsForStore]
+  );
+
+  // ── GPS location ──────────────────────────────────────────────────────────
   function handleGetLocation() {
     if (!navigator.geolocation) {
       setErrorMsg("Geolocation is not supported by your browser.");
@@ -184,8 +249,9 @@ export default function Home() {
   const handleMoveEnd = useCallback(
     (lat: number, lng: number) => {
       if (!searchCenter) return;
-      const dist = haversineDistance(lat, lng, searchCenter.lat, searchCenter.lng);
-      setShowSearchAreaButton(dist > 0.5);
+      setShowSearchAreaButton(
+        haversineDistance(lat, lng, searchCenter.lat, searchCenter.lng) > 0.5
+      );
     },
     [searchCenter]
   );
@@ -218,40 +284,60 @@ export default function Home() {
     [stores, refLat, refLng]
   );
 
+  // Prices for the currently selected protein only (passed to Map + LocationCards)
+  const currentPrices = useMemo(() => {
+    const result: Record<number, PriceData> = {};
+    for (const store of stores) {
+      const p = prices[`${store.id}-${selectedProtein}`];
+      if (p) result[store.id] = p;
+    }
+    return result;
+  }, [stores, prices, selectedProtein]);
+
   const sorted = useMemo(() => {
-    const withPrices = storesWithDistance.filter((s) => prices[s.id]);
-    const withoutPrices = storesWithDistance.filter((s) => !prices[s.id]);
+    const withPrices = storesWithDistance.filter((s) => currentPrices[s.id]);
+    const withoutPrices = storesWithDistance.filter((s) => !currentPrices[s.id]);
 
     const sortedPriced = [...withPrices].sort((a, b) =>
       sortMode === "price"
-        ? prices[a.id].price - prices[b.id].price
+        ? currentPrices[a.id].price - currentPrices[b.id].price
         : a.distance - b.distance
     );
     const sortedUnpriced = [...withoutPrices].sort((a, b) => a.distance - b.distance);
 
     return [...sortedPriced, ...sortedUnpriced];
-  }, [storesWithDistance, prices, sortMode]);
+  }, [storesWithDistance, currentPrices, sortMode]);
 
   const cheapestId = useMemo(() => {
-    const priced = sorted.filter((s) => prices[s.id]?.isLive);
+    const priced = sorted.filter((s) => currentPrices[s.id]?.isLive);
     if (!priced.length) return -1;
-    return priced.reduce((minId, s) =>
-      prices[s.id].price < prices[minId].price ? s.id : minId,
+    return priced.reduce(
+      (minId, s) =>
+        currentPrices[s.id].price < currentPrices[minId].price ? s.id : minId,
       priced[0].id
     );
-  }, [sorted, prices]);
+  }, [sorted, currentPrices]);
 
-  const isLiveData = Object.values(prices).some((p) => p.isLive);
+  const isLiveData = Object.values(currentPrices).some((p) => p.isLive);
   const isBusy = appStatus === "locating" || appStatus === "loading";
-
-  // Show the map panel if we've ever loaded, even during re-loads
   const showMap = hasLoadedOnce.current && searchCenter !== null;
   const mapUserLat = userGPS?.lat ?? searchCenter?.lat ?? 0;
   const mapUserLng = userGPS?.lng ?? searchCenter?.lng ?? 0;
 
+  const loadingCurrentProteinCount = useMemo(
+    () => [...loadingPriceKeys].filter((k) => k.endsWith(`-${selectedProtein}`)).length,
+    [loadingPriceKeys, selectedProtein]
+  );
+
+  const detailStoreWithDistance = useMemo(() => {
+    if (!detailStore) return null;
+    const dist = haversineDistance(refLat, refLng, detailStore.lat, detailStore.lng);
+    return { ...detailStore, distance: dist };
+  }, [detailStore, refLat, refLng]);
+
   return (
     <div className="flex flex-col h-screen bg-[#faf8f5] overflow-hidden">
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <header className="shrink-0 bg-[#3d1500] text-white px-4 py-3 shadow-md z-20">
         <div className="flex items-center gap-3">
           <div className="shrink-0 flex items-center gap-2">
@@ -304,7 +390,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── Idle splash ─────────────────────────────────────────────────────── */}
+      {/* ── Idle splash ──────────────────────────────────────────────────── */}
       {appStatus === "idle" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 text-center">
           <div className="text-7xl">🌯</div>
@@ -330,7 +416,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Initial loading (no data yet) ─────────────────────────────────── */}
+      {/* ── Initial loading ───────────────────────────────────────────────── */}
       {isBusy && !showMap && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
           <div className="relative">
@@ -343,7 +429,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Error ─────────────────────────────────────────────────────────────── */}
+      {/* ── Error ────────────────────────────────────────────────────────── */}
       {appStatus === "error" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
           <div className="text-5xl">😕</div>
@@ -365,27 +451,27 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Main layout (stays mounted after first load) ──────────────────── */}
+      {/* ── Main layout ───────────────────────────────────────────────────── */}
       {showMap && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map */}
-          <div className="relative shrink-0" style={{ height: "50vh" }}>
+          <div className="relative shrink-0" style={{ height: "42vh" }}>
             <ChipotleMap
               ref={mapRef}
               userLat={mapUserLat}
               userLng={mapUserLng}
               stores={stores}
-              prices={prices}
+              prices={currentPrices}
               cheapestId={cheapestId}
               selectedId={selectedId}
               hoveredId={hoveredId}
-              onSelectStore={(id) => setSelectedId((prev) => (prev === id ? null : id))}
+              onSelectStore={(id) => handleStoreSelect(id, storesWithDistance)}
               onMoveEnd={handleMoveEndWithRef}
               showSearchAreaButton={showSearchAreaButton}
               onSearchArea={handleSearchArea}
             />
 
-            {/* Overlay spinner during re-loads */}
+            {/* Re-load overlay */}
             {isBusy && (
               <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
                 <div className="relative">
@@ -396,44 +482,48 @@ export default function Home() {
             )}
           </div>
 
-          {/* Sort + meta bar */}
-          <div className="shrink-0 px-4 pt-3 pb-2 flex items-center justify-between bg-[#faf8f5] border-t border-gray-100">
-            <div className="flex flex-col">
-              <p className="text-xs text-gray-500 font-medium">
-                {stores.length} locations
-                {loadingPriceIds.size > 0 && (
-                  <span className="text-gray-400">
-                    {" · "}
-                    <span className="inline-flex items-center gap-1">
-                      <svg className="animate-spin h-3 w-3 text-[#3d1500]" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                      </svg>
-                      Loading {loadingPriceIds.size} prices
+          {/* Protein selector + sort bar */}
+          <div className="shrink-0 px-4 pt-3 pb-2 bg-[#faf8f5] border-t border-gray-100 space-y-2">
+            <ProteinSelector selected={selectedProtein} onChange={handleProteinChange} />
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <p className="text-xs text-gray-500 font-medium">
+                  {stores.length} locations
+                  {loadingCurrentProteinCount > 0 && (
+                    <span className="text-gray-400">
+                      {" · "}
+                      <span className="inline-flex items-center gap-1">
+                        <svg className="animate-spin h-3 w-3 text-[#3d1500]" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Loading {loadingCurrentProteinCount} prices
+                      </span>
                     </span>
-                  </span>
-                )}
-              </p>
-              {cachedAt !== null && (
-                <p className="text-xs text-gray-400">
-                  {minutesAgo === 0 ? "Updated just now" : `Updated ${minutesAgo}m ago`}
+                  )}
                 </p>
-              )}
-            </div>
-            <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
-              {(["price", "distance"] as SortMode[]).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setSortMode(mode)}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                    sortMode === mode
-                      ? "bg-[#3d1500] text-white shadow-sm"
-                      : "text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  {mode === "price" ? "By Price" : "By Distance"}
-                </button>
-              ))}
+                {cachedAt !== null && (
+                  <p className="text-xs text-gray-400">
+                    {minutesAgo === 0 ? "Updated just now" : `Updated ${minutesAgo}m ago`}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+                {(["price", "distance"] as SortMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setSortMode(mode)}
+                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                      sortMode === mode
+                        ? "bg-[#3d1500] text-white shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
+                    }`}
+                  >
+                    {mode === "price" ? "By Price" : "By Distance"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -446,14 +536,14 @@ export default function Home() {
               >
                 <LocationCard
                   store={store}
-                  price={prices[store.id]}
-                  priceLoading={loadingPriceIds.has(store.id)}
+                  price={currentPrices[store.id]}
+                  priceLoading={loadingPriceKeys.has(`${store.id}-${selectedProtein}`)}
                   distance={store.distance}
                   rank={index + 1}
                   isCheapest={store.id === cheapestId}
                   isSelected={selectedId === store.id}
                   isHovered={hoveredId === store.id}
-                  onClick={() => setSelectedId((prev) => (prev === store.id ? null : store.id))}
+                  onClick={() => handleStoreSelect(store.id, storesWithDistance)}
                   onHover={() => setHoveredId(store.id)}
                   onHoverEnd={() => setHoveredId(null)}
                 />
@@ -462,6 +552,20 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* ── Store detail panel ─────────────────────────────────────────────── */}
+      <StoreDetailPanel
+        store={detailStore}
+        allPrices={prices}
+        loadingKeys={loadingPriceKeys}
+        selectedProtein={selectedProtein}
+        distance={detailStoreWithDistance?.distance ?? 0}
+        onClose={() => setDetailStore(null)}
+        onProteinSelect={(p) => {
+          handleProteinChange(p);
+          setDetailStore(null);
+        }}
+      />
     </div>
   );
 }
