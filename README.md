@@ -1,36 +1,176 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+# 🌯 Cheapotle
 
-First, run the development server:
+### Find the cheapest Chipotle chicken bowl near you — with live pricing
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![MapLibre GL](https://img.shields.io/badge/MapLibre_GL_JS-396CB2?logo=mapbox&logoColor=white)](https://maplibre.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+</div>
+
+---
+
+## What is this?
+
+**Cheapotle** is a web app that fetches **real, live Chipotle chicken bowl prices** from Chipotle's own API — across every location near you — and ranks them cheapest to most expensive on an interactive map.
+
+Prices genuinely vary by location (sometimes by over **$1.50**). Cheapotle helps you find the deal before you drive.
+
+---
+
+## Features
+
+- 🗺 **Live map** — MapLibre GL JS with OpenFreeMap tiles (no API key needed)
+- 💰 **Real pricing** — pulled server-side from `services.chipotle.com` on every request
+- 📍 **Your location** — browser Geolocation API, distances via Haversine formula
+- ⭐ **Cheapest highlighted** — distinct green marker + badge on the best deal
+- 🚗 **Pickup & delivery prices** — both shown per location
+- 🔀 **Sort by price or distance** — toggle between the two
+- ⚡ **5-minute server cache** — fast repeat loads, no hammering the API
+- 🛡 **Graceful fallback** — hardcoded prices kick in if the API is unreachable
+- 📱 **Mobile-first** — full-height layout, scrollable card list beneath the map
+
+---
+
+## How it works
+
+```
+Browser (Geolocation API)
+        │
+        ▼
+Next.js frontend ──fetch──▶ /api/prices  (Next.js API Route)
+                                   │
+           ┌───────────────────────┼───────────────────────┐
+           ▼                       ▼                       ▼
+      store #499              store #545              store #572  ...
+     (UK Campus)           (Hamburg Place)          (Richmond Rd)
+           │                       │                       │
+           └───────────────────────┴───────────────────────┘
+                                   │
+                     services.chipotle.com
+                     /menuinnovation/v1/restaurants/{id}/onlinemenu
+                                   │
+                         entrees[] → find "Chicken Bowl"
+                         extract unitPrice + unitDeliveryPrice
+                                   │
+           ◀──────────────────── JSON ──────────────────────
+           { price, deliveryPrice, isLive: true }
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The subscription key is embedded publicly in Chipotle's own frontend JS bundle (`orderweb-cdn.chipotle.com/js/app.js`). No scraping, no auth, no reverse engineering.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Tech stack
 
-## Learn More
+| Layer | Technology |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org) (App Router) |
+| Styling | [Tailwind CSS 4](https://tailwindcss.com) |
+| Map | [MapLibre GL JS](https://maplibre.org) + [OpenFreeMap](https://openfreemap.org) tiles |
+| Language | TypeScript 5 |
+| Pricing data | Chipotle's internal menu API |
+| Deployment | Vercel / any Node.js host |
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Getting started
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+git clone https://github.com/nikhilakula/cheapotle.git
+cd cheapotle
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
+Open [http://localhost:3000](http://localhost:3000), click **Use My Location**, and see live prices.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+> **No API keys required.** The map uses [OpenFreeMap](https://openfreemap.org) (free, no signup) and pricing uses Chipotle's public-facing menu API.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## Project structure
+
+```
+cheapotle/
+├── app/
+│   ├── page.tsx                   # Main UI — splash, map, card list, sort
+│   ├── components/
+│   │   ├── Map.tsx                # MapLibre GL map with custom markers
+│   │   └── LocationCard.tsx       # Price card with live/cheapest badges
+│   └── api/
+│       └── prices/
+│           └── route.ts           # Server-side Chipotle API + 5-min cache
+├── lib/
+│   ├── mockData.ts                # Fallback locations (Lexington, KY)
+│   └── haversine.ts               # Great-circle distance formula
+└── README.md
+```
+
+---
+
+## Adding your city
+
+Update `LEXINGTON_STORES` in `app/api/prices/route.ts` with your local store IDs. Find them using Chipotle's restaurant search API:
+
+```bash
+curl -s -X POST https://services.chipotle.com/restaurant/v3/restaurant \
+  -H "Ocp-Apim-Subscription-Key: b4d9f36380184a3788857063bce25d6a" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "latitude": YOUR_LAT,
+    "longitude": YOUR_LNG,
+    "radius": 25,
+    "restaurantStatuses": ["OPEN", "LAB"],
+    "conceptIds": ["CMG"],
+    "orderBy": "distance",
+    "pageSize": 10,
+    "pageIndex": 0
+  }' | jq '[.data[] | { id: .restaurantNumber, name: .name, address: .address }]'
+```
+
+Then fetch its menu to confirm the Chicken Bowl price:
+
+```bash
+curl -s \
+  -H "Ocp-Apim-Subscription-Key: b4d9f36380184a3788857063bce25d6a" \
+  -H "Origin: https://chipotle.com" \
+  "https://services.chipotle.com/menuinnovation/v1/restaurants/STORE_ID/onlinemenu?channelId=web" \
+  | jq '[.entrees[] | select(.itemType == "Bowl") | { name: .itemName, price: .unitPrice, delivery: .unitDeliveryPrice }]'
+```
+
+---
+
+## Deploying to Vercel
+
+```bash
+npm i -g vercel
+vercel
+```
+
+The `/api/prices` route runs as a serverless function. The 5-minute in-memory cache works per-instance (good enough for personal/small traffic use).
+
+---
+
+## Caveats
+
+- Prices reflect **in-store pickup** from Chipotle's ordering API and may differ from walk-in menu prices.
+- Delivery prices shown are from the same API and include Chipotle's own delivery surcharge.
+- If Chipotle's API changes structure or blocks requests, the app falls back to approximate prices silently.
+- This is an **unofficial** integration — not affiliated with or endorsed by Chipotle Mexican Grill.
+
+---
+
+## License
+
+MIT — do whatever you want with it.
+
+---
+
+<div align="center">
+  Made with ❤️ and too many chicken bowls
+</div>
