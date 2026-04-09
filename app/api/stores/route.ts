@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getStoreImage } from "@/lib/images";
 
 const BASE = "https://services.chipotle.com";
 const KEY = "b4d9f36380184a3788857063bce25d6a";
@@ -17,14 +18,6 @@ export interface StoreLocation {
   lng: number;
   image: string;
 }
-
-const IMAGES = [
-  "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&q=80",
-  "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=400&q=80",
-  "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=400&q=80",
-  "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&q=80",
-  "https://images.unsplash.com/photo-1640423396498-82a3ac46fbd5?w=400&q=80",
-];
 
 const CACHE_TTL = 5 * 60 * 1_000;
 const cache = new Map<string, { stores: StoreLocation[]; ts: number }>();
@@ -56,7 +49,7 @@ function parseStore(s: any, index: number): StoreLocation | null {
     address: addressStr,
     lat: addr.latitude,
     lng: addr.longitude,
-    image: IMAGES[(s.restaurantNumber + index) % IMAGES.length],
+    image: getStoreImage(s.restaurantNumber),
   };
 }
 

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { StoreLocation } from "@/app/api/stores/route";
 import { PriceData } from "@/app/api/price/[storeId]/route";
+import { FOOD_IMAGES } from "@/lib/images";
 
 interface LocationCardProps {
   store: StoreLocation;
@@ -12,7 +13,10 @@ interface LocationCardProps {
   rank: number;
   isCheapest: boolean;
   isSelected: boolean;
+  isHovered: boolean;
   onClick: () => void;
+  onHover: () => void;
+  onHoverEnd: () => void;
 }
 
 export default function LocationCard({
@@ -23,14 +27,21 @@ export default function LocationCard({
   rank,
   isCheapest,
   isSelected,
+  isHovered,
   onClick,
+  onHover,
+  onHoverEnd,
 }: LocationCardProps) {
   return (
     <button
       onClick={onClick}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
       className={`w-full text-left flex gap-0 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-2 focus:outline-none ${
         isSelected
           ? "border-[#441500] shadow-lg scale-[1.01]"
+          : isHovered
+          ? "border-[#441500]/40 shadow-md scale-[1.005]"
           : isCheapest
           ? "border-green-400 shadow-green-100"
           : "border-transparent hover:border-gray-200 hover:shadow-md"
@@ -45,9 +56,7 @@ export default function LocationCard({
           className="object-cover"
           sizes="112px"
           onError={(e) => {
-            // Fallback if image fails
-            (e.target as HTMLImageElement).src =
-              "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&q=80";
+            (e.target as HTMLImageElement).src = FOOD_IMAGES.default;
           }}
         />
         {/* Rank badge */}

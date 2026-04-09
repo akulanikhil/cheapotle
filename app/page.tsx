@@ -14,18 +14,22 @@ const ChipotleMap = dynamic(() => import("./components/Map"), { ssr: false });
 type SortMode = "price" | "distance";
 type AppStatus = "idle" | "locating" | "loading" | "success" | "error";
 
+type Location = {
+  lat: number;
+  lng: number;
+  label: string;
+};
+
 export default function Home() {
   // ── Core state ────────────────────────────────────────────────────────────
   const [appStatus, setAppStatus] = useState<AppStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  // User's physical position (blue dot on map)
-  const [userLat, setUserLat] = useState<number | null>(null);
-  const [userLng, setUserLng] = useState<number | null>(null);
+  // User's physical GPS position — drives the blue dot only
+  const [userGPS, setUserGPS] = useState<Location | null>(null);
 
-  // The lat/lng of the latest successful store search (may differ from user pos)
-  const [searchLat, setSearchLat] = useState<number | null>(null);
-  const [searchLng, setSearchLng] = useState<number | null>(null);
+  // Current search center — drives store fetching, map center, distance calc
+  const [searchCenter, setSearchCenter] = useState<Location | null>(null);
 
   // Stores + prices (separate so locations render immediately)
   const [stores, setStores] = useState<StoreLocation[]>([]);
@@ -35,6 +39,7 @@ export default function Home() {
   // UI
   const [sortMode, setSortMode] = useState<SortMode>("price");
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [showSearchAreaButton, setShowSearchAreaButton] = useState(false);
   const [cachedAt, setCachedAt] = useState<number | null>(null);
   const [minutesAgo, setMinutesAgo] = useState(0);
@@ -42,6 +47,10 @@ export default function Home() {
   const mapRef = useRef<MapHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  // True once we've had at least one successful load — keeps map mounted during re-loads
+  const hasLoadedOnce = useRef(false);
 
   // ── "Updated X min ago" ticker ────────────────────────────────────────────
   useEffect(() => {
@@ -82,23 +91,19 @@ export default function Home() {
 
   const fetchPricesProgressively = useCallback(
     async (storeList: StoreLocation[], refLat: number, refLng: number) => {
-      // Sort by distance from reference point
       const sorted = [...storeList].sort(
         (a, b) =>
           haversineDistance(refLat, refLng, a.lat, a.lng) -
           haversineDistance(refLat, refLng, b.lat, b.lng)
       );
 
-      // Mark all as loading
       setLoadingPriceIds(new Set(sorted.map((s) => s.id)));
 
-      // First batch: 10 closest — fetch in parallel
       const first = sorted.slice(0, 10);
       const rest = sorted.slice(10);
 
       await Promise.allSettled(first.map((s) => fetchPrice(s.id)));
 
-      // Remaining in parallel
       if (rest.length > 0) {
         await Promise.allSettled(rest.map((s) => fetchPrice(s.id)));
       }
@@ -108,14 +113,15 @@ export default function Home() {
 
   // ── Store search ──────────────────────────────────────────────────────────
   const searchStores = useCallback(
-    async (lat: number, lng: number) => {
+    async (location: Location) => {
       setAppStatus("loading");
       setShowSearchAreaButton(false);
       setSelectedId(null);
+      setHoveredId(null);
       setPrices({});
 
       try {
-        const res = await fetch(`/api/stores?lat=${lat}&lng=${lng}`);
+        const res = await fetch(`/api/stores?lat=${location.lat}&lng=${location.lng}`);
         if (res.status === 404) {
           setErrorMsg("No Chipotle locations found in this area.");
           setAppStatus("error");
@@ -127,16 +133,14 @@ export default function Home() {
         const storeList: StoreLocation[] = data.stores;
 
         setStores(storeList);
-        setSearchLat(lat);
-        setSearchLng(lng);
+        setSearchCenter(location);
         setCachedAt(Date.now());
         setAppStatus("success");
+        hasLoadedOnce.current = true;
 
-        // Fly map to search point
-        mapRef.current?.flyTo(lat, lng, 12);
+        mapRef.current?.flyTo(location.lat, location.lng, 12);
 
-        // Start progressive price fetching (non-blocking)
-        fetchPricesProgressively(storeList, lat, lng);
+        fetchPricesProgressively(storeList, location.lat, location.lng);
       } catch (err) {
         console.error(err);
         setErrorMsg("Failed to fetch locations. Please try again.");
@@ -156,9 +160,13 @@ export default function Home() {
     setAppStatus("locating");
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        setUserLat(coords.latitude);
-        setUserLng(coords.longitude);
-        searchStores(coords.latitude, coords.longitude);
+        const loc: Location = {
+          lat: coords.latitude,
+          lng: coords.longitude,
+          label: "My Location",
+        };
+        setUserGPS(loc);
+        searchStores(loc);
       },
       () => {
         setErrorMsg("Location access denied. Please allow location or search manually.");
@@ -168,41 +176,20 @@ export default function Home() {
   }
 
   // ── Address search ────────────────────────────────────────────────────────
-  function handleAddressSearch(lat: number, lng: number) {
-    // If we don't have a user position yet, use search point as the reference
-    if (!userLat || !userLng) {
-      setUserLat(lat);
-      setUserLng(lng);
-    }
-    searchStores(lat, lng);
+  function handleAddressSearch(lat: number, lng: number, label: string) {
+    searchStores({ lat, lng, label });
   }
 
   // ── Map move detection ────────────────────────────────────────────────────
   const handleMoveEnd = useCallback(
     (lat: number, lng: number) => {
-      if (appStatus !== "success" || !searchLat || !searchLng) return;
-      // Show "Search this area" if map moved > ~0.5 miles from last search
-      const dist = haversineDistance(lat, lng, searchLat, searchLng);
+      if (!searchCenter) return;
+      const dist = haversineDistance(lat, lng, searchCenter.lat, searchCenter.lng);
       setShowSearchAreaButton(dist > 0.5);
     },
-    [appStatus, searchLat, searchLng]
+    [searchCenter]
   );
 
-  const handleSearchArea = useCallback(() => {
-    const map = mapRef.current as MapHandle & { _center?: { lat: number; lng: number } };
-    // We get the center from the last moveEnd event stored via a ref
-    if (mapCenterRef.current) {
-      const { lat, lng } = mapCenterRef.current;
-      if (!userLat || !userLng) {
-        setUserLat(lat);
-        setUserLng(lng);
-      }
-      searchStores(lat, lng);
-    }
-  }, [searchStores, userLat, userLng]);
-
-  // Store the latest map center so handleSearchArea can use it
-  const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
   const handleMoveEndWithRef = useCallback(
     (lat: number, lng: number) => {
       mapCenterRef.current = { lat, lng };
@@ -211,9 +198,16 @@ export default function Home() {
     [handleMoveEnd]
   );
 
+  const handleSearchArea = useCallback(() => {
+    if (mapCenterRef.current) {
+      const { lat, lng } = mapCenterRef.current;
+      searchStores({ lat, lng, label: "Map area" });
+    }
+  }, [searchStores]);
+
   // ── Derived data ──────────────────────────────────────────────────────────
-  const refLat = userLat ?? searchLat ?? 0;
-  const refLng = userLng ?? searchLng ?? 0;
+  const refLat = userGPS?.lat ?? searchCenter?.lat ?? 0;
+  const refLng = userGPS?.lng ?? searchCenter?.lng ?? 0;
 
   const storesWithDistance = useMemo(
     () =>
@@ -228,7 +222,6 @@ export default function Home() {
     const withPrices = storesWithDistance.filter((s) => prices[s.id]);
     const withoutPrices = storesWithDistance.filter((s) => !prices[s.id]);
 
-    // Sort whichever subset has prices, put unpriced at bottom
     const sortedPriced = [...withPrices].sort((a, b) =>
       sortMode === "price"
         ? prices[a.id].price - prices[b.id].price
@@ -242,8 +235,8 @@ export default function Home() {
   const cheapestId = useMemo(() => {
     const priced = sorted.filter((s) => prices[s.id]?.isLive);
     if (!priced.length) return -1;
-    return priced.reduce((min, s) =>
-      prices[s.id].price < prices[min].price ? s.id : min,
+    return priced.reduce((minId, s) =>
+      prices[s.id].price < prices[minId].price ? s.id : minId,
       priced[0].id
     );
   }, [sorted, prices]);
@@ -251,23 +244,25 @@ export default function Home() {
   const isLiveData = Object.values(prices).some((p) => p.isLive);
   const isBusy = appStatus === "locating" || appStatus === "loading";
 
+  // Show the map panel if we've ever loaded, even during re-loads
+  const showMap = hasLoadedOnce.current && searchCenter !== null;
+  const mapUserLat = userGPS?.lat ?? searchCenter?.lat ?? 0;
+  const mapUserLng = userGPS?.lng ?? searchCenter?.lng ?? 0;
+
   return (
     <div className="flex flex-col h-screen bg-[#faf8f5] overflow-hidden">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="shrink-0 bg-[#3d1500] text-white px-4 py-3 shadow-md z-20">
         <div className="flex items-center gap-3">
-          {/* Logo */}
           <div className="shrink-0 flex items-center gap-2">
             <span className="text-xl">🌯</span>
             <span className="font-bold text-base leading-none tracking-tight">Cheapotle</span>
           </div>
 
-          {/* Search bar */}
           <div className="flex-1 min-w-0">
             <SearchBar onSearch={handleAddressSearch} disabled={isBusy} />
           </div>
 
-          {/* Location button / status */}
           <div className="shrink-0">
             {appStatus === "success" ? (
               <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1">
@@ -335,8 +330,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Loading ───────────────────────────────────────────────────────────── */}
-      {isBusy && (
+      {/* ── Initial loading (no data yet) ─────────────────────────────────── */}
+      {isBusy && !showMap && (
         <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
           <div className="relative">
             <div className="w-16 h-16 rounded-full border-4 border-red-100 border-t-[#3d1500] animate-spin" />
@@ -370,24 +365,35 @@ export default function Home() {
         </div>
       )}
 
-      {/* ── Main layout ──────────────────────────────────────────────────────── */}
-      {appStatus === "success" && userLat !== null && userLng !== null && (
+      {/* ── Main layout (stays mounted after first load) ──────────────────── */}
+      {showMap && (
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map */}
-          <div className="shrink-0" style={{ height: "50vh" }}>
+          <div className="relative shrink-0" style={{ height: "50vh" }}>
             <ChipotleMap
               ref={mapRef}
-              userLat={userLat}
-              userLng={userLng}
+              userLat={mapUserLat}
+              userLng={mapUserLng}
               stores={stores}
               prices={prices}
               cheapestId={cheapestId}
               selectedId={selectedId}
+              hoveredId={hoveredId}
               onSelectStore={(id) => setSelectedId((prev) => (prev === id ? null : id))}
               onMoveEnd={handleMoveEndWithRef}
               showSearchAreaButton={showSearchAreaButton}
               onSearchArea={handleSearchArea}
             />
+
+            {/* Overlay spinner during re-loads */}
+            {isBusy && (
+              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full border-4 border-red-100 border-t-[#3d1500] animate-spin" />
+                  <span className="absolute inset-0 flex items-center justify-center text-lg">🌯</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sort + meta bar */}
@@ -446,7 +452,10 @@ export default function Home() {
                   rank={index + 1}
                   isCheapest={store.id === cheapestId}
                   isSelected={selectedId === store.id}
+                  isHovered={hoveredId === store.id}
                   onClick={() => setSelectedId((prev) => (prev === store.id ? null : store.id))}
+                  onHover={() => setHoveredId(store.id)}
+                  onHoverEnd={() => setHoveredId(null)}
                 />
               </div>
             ))}

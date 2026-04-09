@@ -19,6 +19,7 @@ interface MapProps {
   prices: Record<number, PriceData>;
   cheapestId: number;
   selectedId: number | null;
+  hoveredId: number | null;
   onSelectStore: (id: number) => void;
   onMoveEnd: (lat: number, lng: number) => void;
   showSearchAreaButton: boolean;
@@ -33,6 +34,7 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
     prices,
     cheapestId,
     selectedId,
+    hoveredId,
     onSelectStore,
     onMoveEnd,
     showSearchAreaButton,
@@ -64,11 +66,6 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
     });
 
     map.addControl(new maplibregl.NavigationControl(), "top-right");
-
-    map.on("moveend", () => {
-      const { lat, lng } = map.getCenter();
-      onMoveEnd(lat, lng);
-    });
 
     mapRef.current = map;
 
@@ -123,21 +120,23 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
     stores.forEach((store) => {
       const isCheapest = store.id === cheapestId;
       const isSelected = store.id === selectedId;
+      const isHovered = store.id === hoveredId;
       const price = prices[store.id];
 
+      const active = isSelected || isHovered;
       const el = document.createElement("div");
       el.style.cssText = `
-        width:${isSelected ? "38px" : "32px"};
-        height:${isSelected ? "38px" : "32px"};
+        width:${active ? "38px" : "32px"};
+        height:${active ? "38px" : "32px"};
         border-radius:50%;
         background:${isCheapest ? "#16a34a" : "#6b7280"};
         border:3px solid white;
-        box-shadow:0 2px 8px rgba(0,0,0,${isSelected ? ".45" : ".25"});
+        box-shadow:0 2px 8px rgba(0,0,0,${active ? ".45" : ".25"});
         cursor:pointer;
         display:flex;align-items:center;justify-content:center;
-        font-size:${isSelected ? "16px" : "13px"};
+        font-size:${active ? "16px" : "13px"};
         transition:all .2s ease;
-        ${isSelected ? `outline:3px solid ${isCheapest ? "#16a34a" : "#374151"};outline-offset:2px;` : ""}
+        ${active ? `outline:3px solid ${isCheapest ? "#16a34a" : "#374151"};outline-offset:2px;` : ""}
       `;
       el.innerHTML = isCheapest ? "⭐" : "🌯";
       el.title = store.name;
@@ -165,7 +164,7 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
       markersRef.current[store.id] = marker;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stores, cheapestId, selectedId, prices]);
+  }, [stores, cheapestId, selectedId, hoveredId, prices]);
 
   // ── Fly to selected store ────────────────────────────────────────────────
   useEffect(() => {

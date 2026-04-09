@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
+import { getStoreImage, FOOD_IMAGES } from "@/lib/images";
 
 // Optional: set GOOGLE_PLACES_API_KEY in .env.local for real store photos.
 // Without it, a deterministic food placeholder is returned — no broken images.
 const GOOGLE_KEY = process.env.GOOGLE_PLACES_API_KEY;
-
-const PLACEHOLDERS = [
-  "https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=400&q=80",
-  "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?w=400&q=80",
-  "https://images.unsplash.com/photo-1599974579688-8dbdd335c77f?w=400&q=80",
-  "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&q=80",
-  "https://images.unsplash.com/photo-1640423396498-82a3ac46fbd5?w=400&q=80",
-  "https://images.unsplash.com/photo-1504544750208-dc0358e63f7f?w=400&q=80",
-  "https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=400&q=80",
-];
 
 // In-memory image cache (store ID → URL)
 const cache = new Map<number, { url: string; ts: number }>();
@@ -36,7 +27,7 @@ export async function GET(request: Request) {
 
   // No Google key → return deterministic placeholder immediately
   if (!GOOGLE_KEY) {
-    const url = PLACEHOLDERS[storeId % PLACEHOLDERS.length];
+    const url = getStoreImage(storeId);
     cache.set(storeId, { url, ts: Date.now() });
     return NextResponse.json({ imageUrl: url });
   }
@@ -68,7 +59,7 @@ export async function GET(request: Request) {
     const buf = await imgRes.arrayBuffer();
     const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
 
-    cache.set(storeId, { url: `data:placeholder`, ts: Date.now() }); // mark as fetched
+    cache.set(storeId, { url: FOOD_IMAGES.default, ts: Date.now() }); // mark as fetched
 
     return new NextResponse(Buffer.from(buf), {
       headers: {
@@ -78,7 +69,7 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     console.warn(`[store-image] store ${storeId} fell back to placeholder:`, err);
-    const url = PLACEHOLDERS[storeId % PLACEHOLDERS.length];
+    const url = getStoreImage(storeId);
     cache.set(storeId, { url, ts: Date.now() });
     return NextResponse.json({ imageUrl: url });
   }
