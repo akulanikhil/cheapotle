@@ -65,6 +65,11 @@ export default function Home() {
       const res = await fetch(`/api/price/${storeId}`);
       if (!res.ok) return;
       const data: PriceData = await res.json();
+      if (!data.isLive) {
+        // Store has no online ordering — remove it entirely
+        setStores((prev) => prev.filter((s) => s.id !== storeId));
+        return;
+      }
       setPrices((prev) => ({ ...prev, [storeId]: data }));
     } finally {
       setLoadingPriceIds((prev) => {

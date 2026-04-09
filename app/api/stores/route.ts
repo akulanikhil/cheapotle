@@ -35,6 +35,9 @@ function cacheKey(lat: number, lng: number) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function parseStore(s: any, index: number): StoreLocation | null {
+  // Skip closed or dead stores — only show ones that are actively OPEN
+  if (s?.restaurantStatus !== "OPEN") return null;
+
   const addr = s?.addresses?.[0];
   if (!addr?.latitude || !addr?.longitude) return null;
 
