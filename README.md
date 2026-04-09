@@ -33,7 +33,7 @@ Prices genuinely vary by location (sometimes by over **$1.50**). Cheapotle helps
 - ⭐ **Cheapest highlighted** — distinct green marker + badge on the best deal
 - 🚗 **Pickup & delivery prices** — both shown per location
 - 🔀 **Sort by price or distance** — toggle between the two
-- 🖼 **Store photos** — real Google Places photos (optional) or food imagery fallback
+- 🖼 **Store photos** — food imagery for each location
 - 🛡 **Graceful fallback** — estimated prices shown when API is unreachable
 - 📱 **Mobile-first** — full-height layout, scrollable card list beneath the map
 
@@ -74,7 +74,7 @@ The subscription key is embedded publicly in Chipotle's own frontend JS bundle (
 | Styling | [Tailwind CSS 4](https://tailwindcss.com) |
 | Map | [MapLibre GL JS](https://maplibre.org) + [OpenFreeMap](https://openfreemap.org) tiles |
 | Geocoding | [Nominatim](https://nominatim.org) (OpenStreetMap, free, no key) |
-| Store images | Google Places API (optional) with Unsplash fallback |
+| Store images | Unsplash (deterministic, no key needed) |
 | Language | TypeScript 5 |
 | Pricing data | Chipotle's internal menu API |
 | Deployment | Vercel / any Node.js host |
@@ -96,19 +96,6 @@ Open [http://localhost:3000](http://localhost:3000) and either:
 
 > **No API keys required.** The map uses [OpenFreeMap](https://openfreemap.org) (free, no signup), geocoding uses [Nominatim](https://nominatim.org) (free, no signup), and pricing uses Chipotle's public-facing menu API.
 
-### Optional: Real store photos
-
-Add a Google Places API key to get actual Chipotle storefront photos:
-
-```bash
-# .env.local
-GOOGLE_PLACES_API_KEY=your_key_here
-```
-
-Without it, the app uses deterministic food photography from Unsplash — no broken images.
-
----
-
 ## Project structure
 
 ```
@@ -122,11 +109,9 @@ cheapotle/
 │   └── api/
 │       ├── stores/route.ts           # Dynamic Chipotle store discovery by lat/lng
 │       ├── price/[storeId]/route.ts  # Per-store pricing with 5-min cache
-│       ├── geocode/route.ts          # Nominatim address → lat/lng wrapper
-│       ├── store-image/route.ts      # Google Places image proxy + fallback
-│       └── prices/route.ts           # (legacy) combined stores+prices endpoint
+│       └── geocode/route.ts          # Nominatim address → lat/lng wrapper
 ├── lib/
-│   ├── mockData.ts                   # Fallback locations for API outages
+│   ├── images.ts                     # Centralized food image map + getStoreImage()
 │   └── haversine.ts                  # Great-circle distance formula
 └── README.md
 ```
@@ -143,9 +128,6 @@ Returns `{ price, deliveryPrice, isLive }` for a single store (5-min cache).
 
 ### `GET /api/geocode?q=Chicago+IL`
 Returns `{ lat, lng, displayName }` via Nominatim (US + CA only).
-
-### `GET /api/store-image?storeId=499&name=Chipotle+North+Bridge&address=...`
-Returns `{ imageUrl }` — Google Places photo when key is set, Unsplash placeholder otherwise.
 
 ---
 
