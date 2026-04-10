@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { StoreLocation } from "@/app/api/stores/route";
 import { PriceData } from "@/app/api/price/[storeId]/route";
 import { PROTEINS, type Protein } from "@/lib/proteins";
@@ -336,28 +337,25 @@ export default function Home() {
   }, [detailStore, refLat, refLng]);
 
   return (
-    <div className="flex flex-col h-screen bg-[#faf8f5] overflow-hidden">
+    <div className="flex flex-col h-screen bg-white overflow-hidden">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header className="shrink-0 bg-[#3d1500] text-white px-4 py-3 shadow-md z-20">
+      <header className="shrink-0 bg-white border-b border-gray-100 px-4 py-3 shadow-sm z-20">
         <div className="flex items-center gap-3">
-          <div className="shrink-0 flex items-center gap-2">
-            <span className="text-xl">🌯</span>
-            <span className="font-bold text-base leading-none tracking-tight">Cheapotle</span>
-          </div>
-
+          {/* Full-width search bar */}
           <div className="flex-1 min-w-0">
             <SearchBar onSearch={handleAddressSearch} disabled={isBusy} />
           </div>
 
+          {/* Status / Near me button */}
           <div className="shrink-0">
             {appStatus === "success" ? (
-              <div className="flex items-center gap-1.5 bg-white/10 rounded-full px-2.5 py-1">
+              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5">
                 <div
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    isLiveData ? "bg-green-400 animate-pulse" : "bg-yellow-400"
+                  className={`w-2 h-2 rounded-full ${
+                    isLiveData ? "bg-green-500 animate-pulse" : "bg-yellow-400"
                   }`}
                 />
-                <span className="text-xs font-medium text-white/90 hidden sm:block">
+                <span className="text-xs font-semibold text-gray-600 hidden sm:block">
                   {isLiveData ? "Live" : "Est."}
                 </span>
               </div>
@@ -365,7 +363,7 @@ export default function Home() {
               <button
                 onClick={handleGetLocation}
                 disabled={isBusy}
-                className="flex items-center gap-1.5 bg-white text-[#3d1500] text-xs font-semibold px-3 py-2 rounded-full shadow transition hover:bg-red-50 disabled:opacity-60 whitespace-nowrap"
+                className="flex items-center gap-2 bg-[#c41230] hover:bg-[#a30e28] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-sm transition-colors disabled:opacity-60 whitespace-nowrap uppercase tracking-wide"
               >
                 {isBusy ? (
                   <>
@@ -392,18 +390,32 @@ export default function Home() {
 
       {/* ── Idle splash ──────────────────────────────────────────────────── */}
       {appStatus === "idle" && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-6 px-6 text-center">
-          <div className="text-7xl">🌯</div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Find the Cheapest Chipotle</h2>
-            <p className="text-gray-500 text-sm max-w-xs mx-auto">
-              Search any city or ZIP code above, or use your current location.
-            </p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 text-center bg-white">
+          <div className="flex flex-col items-center gap-6">
+            <Image
+              src="/logo.png"
+              alt="Cheapotle"
+              width={1053}
+              height={237}
+              className="w-72 sm:w-[420px] h-auto object-contain"
+              priority
+            />
+            <div>
+              <h2
+                className="text-4xl font-bold text-[#3d1500] mb-3 uppercase tracking-wide leading-tight"
+                style={{ fontFamily: "var(--font-barlow-condensed)" }}
+              >
+                Find the Cheapest Bowl Near You
+              </h2>
+              <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed font-medium">
+                Real-time prices from every Chipotle nearby —<br />compare all proteins, sorted by cost.
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
             <button
               onClick={handleGetLocation}
-              className="flex items-center justify-center gap-2 bg-[#3d1500] hover:bg-[#5a1f00] text-white font-semibold py-3 px-6 rounded-full shadow-lg transition-colors text-sm"
+              className="flex items-center justify-center gap-2 bg-[#c41230] hover:bg-[#a30e28] text-white font-bold py-3 px-8 rounded-full shadow-md transition-colors text-sm uppercase tracking-wider"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -411,33 +423,46 @@ export default function Home() {
               </svg>
               Use My Location
             </button>
-            <div className="text-sm text-gray-400 flex items-center justify-center">or search above ↑</div>
+            <span className="text-sm text-gray-400 font-medium">or search a city above ↑</span>
           </div>
         </div>
       )}
 
       {/* ── Initial loading ───────────────────────────────────────────────── */}
       {isBusy && !showMap && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-full border-4 border-red-100 border-t-[#3d1500] animate-spin" />
-            <span className="absolute inset-0 flex items-center justify-center text-2xl">🌯</span>
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 bg-white">
+          <Image
+            src="/logo.png"
+            alt="Cheapotle"
+            width={1053}
+            height={237}
+            className="w-64 h-auto object-contain opacity-80"
+            priority
+          />
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#c41230] animate-spin" />
+            <p className="text-gray-500 text-sm font-medium">
+              {appStatus === "locating" ? "Getting your location…" : "Finding nearby Chipotles…"}
+            </p>
           </div>
-          <p className="text-gray-600 text-sm font-medium">
-            {appStatus === "locating" ? "Getting your location…" : "Finding nearby Chipotles…"}
-          </p>
         </div>
       )}
 
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {appStatus === "error" && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
-          <div className="text-5xl">😕</div>
-          <p className="text-red-600 font-medium text-sm max-w-xs">{errorMsg}</p>
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center bg-white">
+          <Image
+            src="/logo.png"
+            alt="Cheapotle"
+            width={1053}
+            height={237}
+            className="w-64 h-auto object-contain opacity-70"
+          />
+          <p className="text-red-600 font-semibold text-sm max-w-xs">{errorMsg}</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleGetLocation}
-              className="bg-[#3d1500] text-white text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-[#5a1f00] transition-colors"
+              className="bg-[#c41230] hover:bg-[#a30e28] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors uppercase tracking-wide"
             >
               Try My Location
             </button>
@@ -473,17 +498,14 @@ export default function Home() {
 
             {/* Re-load overlay */}
             {isBusy && (
-              <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
-                <div className="relative">
-                  <div className="w-12 h-12 rounded-full border-4 border-red-100 border-t-[#3d1500] animate-spin" />
-                  <span className="absolute inset-0 flex items-center justify-center text-lg">🌯</span>
-                </div>
+              <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
+                <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#c41230] animate-spin" />
               </div>
             )}
           </div>
 
           {/* Protein selector + sort bar */}
-          <div className="shrink-0 px-4 pt-3 pb-2 bg-[#faf8f5] border-t border-gray-100 space-y-2">
+          <div className="shrink-0 px-4 pt-3 pb-2 bg-white border-t border-gray-100 space-y-2.5">
             <ProteinSelector selected={selectedProtein} onChange={handleProteinChange} />
 
             <div className="flex items-center justify-between">
@@ -514,11 +536,12 @@ export default function Home() {
                   <button
                     key={mode}
                     onClick={() => setSortMode(mode)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    className={`px-3 py-1 rounded-md text-xs uppercase tracking-wide transition-all ${
                       sortMode === mode
-                        ? "bg-[#3d1500] text-white shadow-sm"
+                        ? "bg-[#c41230] text-white shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
                     }`}
+                    style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 700 }}
                   >
                     {mode === "price" ? "By Price" : "By Distance"}
                   </button>

@@ -14,11 +14,12 @@ export default function ProteinSelector({ selected, onChange }: ProteinSelectorP
         <button
           key={p}
           onClick={() => onChange(p)}
-          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all ${
+          className={`shrink-0 px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-all ${
             selected === p
-              ? "bg-[#3d1500] text-white shadow-sm"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              ? "bg-[#c41230] text-white shadow-sm"
+              : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
           }`}
+          style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 700, fontSize: "0.8rem" }}
         >
           {PROTEIN_LABELS[p]}
         </button>
