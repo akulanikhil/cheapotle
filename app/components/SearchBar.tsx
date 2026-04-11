@@ -54,8 +54,10 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
   return (
     <div className="flex flex-col gap-1">
       <div
-        className={`flex items-center gap-2 bg-white rounded-xl shadow-md px-3 py-2 border transition-all ${
-          error ? "border-red-300" : "border-gray-200 focus-within:border-[#3d1500] focus-within:shadow-lg"
+        className={`flex items-center gap-2.5 bg-gray-50 rounded-xl px-4 py-3 border-2 transition-all ${
+          error
+            ? "border-red-300 bg-white"
+            : "border-gray-200 focus-within:border-[#c41230] focus-within:bg-white focus-within:shadow-sm"
         }`}
       >
         {/* Search icon */}
@@ -64,7 +66,7 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={2.5}
         >
           <path
             strokeLinecap="round"
@@ -79,9 +81,9 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="City, address, or ZIP code…"
+          placeholder="Search city, address, or ZIP code…"
           disabled={disabled || loading}
-          className="flex-1 text-sm text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0 disabled:opacity-50"
+          className="flex-1 text-sm font-medium text-gray-800 placeholder-gray-400 bg-transparent outline-none min-w-0 disabled:opacity-50"
         />
 
         {/* Clear button */}
@@ -99,7 +101,7 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
 
         {/* Loading spinner */}
         {loading && (
-          <svg className="animate-spin h-4 w-4 text-[#3d1500] shrink-0" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin h-4 w-4 text-[#c41230] shrink-0" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
@@ -110,7 +112,7 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
           <button
             onClick={handleSearch}
             disabled={!query.trim() || disabled}
-            className="shrink-0 bg-[#3d1500] text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-[#5a1f00] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="shrink-0 bg-[#c41230] hover:bg-[#a30e28] text-white text-xs font-bold px-4 py-1.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors uppercase tracking-wide"
           >
             Search
           </button>
@@ -118,7 +120,7 @@ export default function SearchBar({ onSearch, disabled }: SearchBarProps) {
       </div>
 
       {error && (
-        <p className="text-xs text-red-600 pl-2">{error}</p>
+        <p className="text-xs font-medium text-red-600 pl-1">{error}</p>
       )}
     </div>
   );
