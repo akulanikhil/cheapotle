@@ -39,7 +39,7 @@ function ProteinTile({
       onClick={onClick}
       className={`relative rounded-xl border-2 p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md cursor-pointer text-center ${
         isSelected
-          ? "border-[#3d1500] bg-[#fdf5f0] shadow-sm"
+          ? "border-[#c41230] bg-[#fff5f7] shadow-sm"
           : "border-gray-200 bg-white hover:border-gray-300"
       }`}
     >
@@ -61,14 +61,17 @@ function ProteinTile({
         />
       </div>
 
-      <span className="text-xs font-bold text-gray-800 leading-tight">
+      <span
+        className="text-xs font-bold text-gray-800 leading-tight uppercase tracking-wider"
+        style={{ fontFamily: "var(--font-barlow-condensed)", fontSize: "0.75rem" }}
+      >
         {PROTEIN_LABELS[protein]}
       </span>
 
       {isLoading ? (
         <div className="h-4 w-12 bg-gray-100 rounded animate-pulse" />
       ) : price?.isLive ? (
-        <span className={`text-sm font-extrabold ${isSelected ? "text-[#3d1500]" : "text-gray-700"}`}>
+        <span className={`text-sm font-black tracking-tight ${isSelected ? "text-[#c41230]" : "text-gray-800"}`}>
           ${price.price.toFixed(2)}
         </span>
       ) : (
@@ -150,9 +153,20 @@ export default function StoreDetailPanel({
                   />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 text-sm leading-snug">{store.name}</h3>
-                  <p className="text-xs text-gray-400 truncate mt-0.5">{store.address}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{distance.toFixed(1)} mi away</p>
+                  <h3 className="font-extrabold text-gray-900 text-sm leading-snug tracking-tight">{store.name}</h3>
+                  <a
+                    href={`https://maps.google.com/?q=${encodeURIComponent(store.address)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#c41230] font-medium mt-0.5 truncate transition-colors group"
+                  >
+                    <svg className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span className="truncate">{store.address}</span>
+                  </a>
+                  <p className="text-xs text-gray-500 mt-0.5 font-semibold">{distance.toFixed(1)} mi away</p>
                 </div>
                 <button
                   onClick={onClose}
@@ -165,7 +179,10 @@ export default function StoreDetailPanel({
               </div>
 
               {/* Section label */}
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+              <p
+                className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3"
+                style={{ fontFamily: "var(--font-barlow-condensed)" }}
+              >
                 Bowl Prices
               </p>
 

@@ -42,9 +42,9 @@ export default function LocationCard({
       onMouseLeave={onHoverEnd}
       className={`w-full text-left flex gap-0 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-2 focus:outline-none ${
         isSelected
-          ? "border-[#441500] shadow-lg scale-[1.01]"
+          ? "border-[#c41230] shadow-lg scale-[1.01]"
           : isHovered
-          ? "border-[#441500]/40 shadow-md scale-[1.005]"
+          ? "border-[#c41230]/30 shadow-md scale-[1.005]"
           : isCheapest
           ? "border-green-400 shadow-green-100"
           : "border-transparent hover:border-gray-200 hover:shadow-md"
@@ -74,7 +74,7 @@ export default function LocationCard({
       <div className="flex-1 px-4 py-3 flex flex-col justify-between min-w-0">
         <div>
           <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-gray-900 text-sm leading-snug truncate">
+            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate tracking-tight">
               {store.name}
             </h3>
             {isCheapest && price && (
@@ -83,7 +83,19 @@ export default function LocationCard({
               </span>
             )}
           </div>
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{store.address}</p>
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(store.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#c41230] font-medium mt-0.5 truncate transition-colors group"
+          >
+            <svg className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="truncate">{store.address}</span>
+          </a>
         </div>
 
         <div className="flex items-end justify-between mt-2">
@@ -92,30 +104,30 @@ export default function LocationCard({
             {priceLoading || !price ? (
               <div className="flex items-center gap-2">
                 <div className="h-7 w-16 bg-gray-100 rounded animate-pulse" />
-                <span className="text-xs text-gray-400">Loading price…</span>
+                <span className="text-xs text-gray-400 font-medium">Loading…</span>
               </div>
             ) : (
               <>
                 <div className="flex items-baseline gap-1.5 flex-wrap">
                   <span
-                    className={`text-2xl font-extrabold tracking-tight ${
-                      isCheapest ? "text-green-600" : "text-gray-800"
+                    className={`text-2xl font-black tracking-tight ${
+                      isCheapest ? "text-green-600" : "text-gray-900"
                     }`}
                   >
                     ${price.price.toFixed(2)}
                   </span>
                   {price.isLive && (
-                    <span className="text-xs font-semibold text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5">
+                    <span className="text-xs font-bold text-green-600 bg-green-50 border border-green-200 rounded-full px-1.5 py-0.5 uppercase tracking-wide">
                       live
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <span className="text-xs text-gray-400">pickup</span>
+                  <span className="text-xs text-gray-400 font-medium">pickup</span>
                   {price.deliveryPrice > 0 && (
                     <>
                       <span className="text-xs text-gray-300">·</span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 font-medium">
                         ${price.deliveryPrice.toFixed(2)} delivery
                       </span>
                     </>
@@ -127,8 +139,8 @@ export default function LocationCard({
 
           {/* Distance */}
           <div className="text-right shrink-0">
-            <span className="text-sm font-medium text-gray-600">{distance.toFixed(1)}</span>
-            <span className="text-xs text-gray-400 ml-0.5">mi</span>
+            <span className="text-sm font-bold text-gray-700">{distance.toFixed(1)}</span>
+            <span className="text-xs text-gray-400 font-medium ml-0.5">mi</span>
           </div>
         </div>
       </div>
