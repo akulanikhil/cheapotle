@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Montserrat, Barlow_Condensed } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -31,7 +32,10 @@ export default function RootLayout({
       lang="en"
       className={`h-full antialiased ${montserrat.variable} ${barlowCondensed.variable}`}
     >
-      <body className="h-full">{children}</body>
+      <body className="h-full">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
