@@ -50,6 +50,9 @@ export default function Home() {
   const listRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const mapCenterRef = useRef<{ lat: number; lng: number } | null>(null);
+  const mapZoomRef = useRef<number>(12);
+  const searchZoomRef = useRef<number>(12);
+  const mapBoundsRef = useRef<{ north: number; south: number; east: number; west: number } | null>(null);
   const hasLoadedOnce = useRef(false);
 
   // Stable refs to avoid stale closures
@@ -147,7 +150,7 @@ export default function Home() {
 
   // ── Store search ──────────────────────────────────────────────────────────
   const searchStores = useCallback(
-    async (location: Location) => {
+    async (location: Location, skipFlyTo = false) => {
       setAppStatus("loading");
       setShowSearchAreaButton(false);
       setSelectedId(null);
@@ -172,7 +175,13 @@ export default function Home() {
         setAppStatus("success");
         hasLoadedOnce.current = true;
 
-        mapRef.current?.flyTo(location.lat, location.lng, 12);
+        if (!skipFlyTo) {
+          mapRef.current?.flyTo(location.lat, location.lng, 12);
+          searchZoomRef.current = 12;
+        } else {
+          // Stay at current zoom — record it as the new search zoom baseline
+          searchZoomRef.current = mapZoomRef.current;
+        }
 
         // Fetch prices for current protein, removing stores without online ordering
         fetchPricesProgressively(
@@ -190,6 +199,103 @@ export default function Home() {
     },
     [fetchPricesProgressively]
   );
+
+  // ── Area search using visible map city/town labels as search anchors ──────
+  const searchArea = useCallback(async () => {
+    setAppStatus("loading");
+    setShowSearchAreaButton(false);
+    setSelectedId(null);
+    setDetailStore(null);
+    setPrices({});
+
+    // Primary: query MapLibre's rendered city/town label features — these are
+    // the exact coordinates of every settlement visible on screen, which puts
+    // us right inside each city's Chipotle cluster (API radius ~5 mi).
+    let points = mapRef.current?.getVisiblePlacePoints() ?? [];
+
+    // Fallback: if no place labels rendered (e.g. very high zoom), use a
+    // tight 5-mile grid derived from the current bounds.
+    if (points.length === 0) {
+      const b = mapRef.current?.getBounds() ?? mapBoundsRef.current;
+      if (b) {
+        const { north, south, east, west } = b;
+        const midLat = (north + south) / 2;
+        const latMiles = (north - south) * 69;
+        const lngMiles = (east - west) * 69 * Math.cos((midLat * Math.PI) / 180);
+        const SPACING = 5;
+        const rows = Math.max(1, Math.min(Math.ceil(latMiles / SPACING), 8));
+        const cols = Math.max(1, Math.min(Math.ceil(lngMiles / SPACING), 8));
+        for (let r = 0; r < rows; r++)
+          for (let c = 0; c < cols; c++)
+            points.push({
+              lat: south + ((north - south) / rows) * (r + 0.5),
+              lng: west + ((east - west) / cols) * (c + 0.5),
+            });
+      }
+    }
+
+    // Always include the current map center as a backstop
+    if (mapCenterRef.current) points.push(mapCenterRef.current);
+
+    // Deduplicate by rounded coordinate
+    const seen2 = new Set<string>();
+    points = points.filter((p) => {
+      const k = `${p.lat.toFixed(2)},${p.lng.toFixed(2)}`;
+      if (seen2.has(k)) return false;
+      seen2.add(k);
+      return true;
+    });
+
+    try {
+      const results = await Promise.allSettled(
+        points.map((p) =>
+          fetch(`/api/stores?lat=${p.lat}&lng=${p.lng}`).then((r) => r.json())
+        )
+      );
+
+      const seenIds = new Set<number>();
+      const allStores: StoreLocation[] = [];
+      for (const r of results) {
+        if (r.status === "fulfilled" && Array.isArray(r.value.stores)) {
+          for (const s of r.value.stores) {
+            if (!seenIds.has(s.id)) {
+              seenIds.add(s.id);
+              allStores.push(s);
+            }
+          }
+        }
+      }
+
+      if (allStores.length === 0) {
+        setErrorMsg("No Chipotle locations found in this area.");
+        setAppStatus("error");
+        return;
+      }
+
+      const b = mapRef.current?.getBounds() ?? mapBoundsRef.current;
+      const centerLat = b ? (b.north + b.south) / 2 : (mapCenterRef.current?.lat ?? 0);
+      const centerLng = b ? (b.east + b.west) / 2 : (mapCenterRef.current?.lng ?? 0);
+
+      setStores(allStores);
+      setSearchCenter({ lat: centerLat, lng: centerLng, label: "Map area" });
+      setCachedAt(Date.now());
+      setAppStatus("success");
+      hasLoadedOnce.current = true;
+      searchZoomRef.current = mapZoomRef.current;
+
+      fetchPricesProgressively(
+        allStores,
+        centerLat,
+        centerLng,
+        selectedProteinRef.current,
+        true
+      );
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Failed to fetch locations. Please try again.");
+      setAppStatus("error");
+    }
+  }, [fetchPricesProgressively]);
 
   // ── Protein change ────────────────────────────────────────────────────────
   const handleProteinChange = useCallback(
@@ -246,31 +352,30 @@ export default function Home() {
     searchStores({ lat, lng, label });
   }
 
-  // ── Map move detection ────────────────────────────────────────────────────
+  // ── Map move / zoom detection ─────────────────────────────────────────────
   const handleMoveEnd = useCallback(
-    (lat: number, lng: number) => {
+    (lat: number, lng: number, zoom: number) => {
       if (!searchCenter) return;
-      setShowSearchAreaButton(
-        haversineDistance(lat, lng, searchCenter.lat, searchCenter.lng) > 0.5
-      );
+      const centerMoved = haversineDistance(lat, lng, searchCenter.lat, searchCenter.lng) > 0.5;
+      const zoomedOut = zoom < searchZoomRef.current - 0.75;
+      setShowSearchAreaButton(centerMoved || zoomedOut);
     },
     [searchCenter]
   );
 
   const handleMoveEndWithRef = useCallback(
-    (lat: number, lng: number) => {
+    (lat: number, lng: number, zoom: number, bounds: { north: number; south: number; east: number; west: number }) => {
       mapCenterRef.current = { lat, lng };
-      handleMoveEnd(lat, lng);
+      mapZoomRef.current = zoom;
+      mapBoundsRef.current = bounds;
+      handleMoveEnd(lat, lng, zoom);
     },
     [handleMoveEnd]
   );
 
   const handleSearchArea = useCallback(() => {
-    if (mapCenterRef.current) {
-      const { lat, lng } = mapCenterRef.current;
-      searchStores({ lat, lng, label: "Map area" });
-    }
-  }, [searchStores]);
+    searchArea();
+  }, [searchArea]);
 
   // ── Derived data ──────────────────────────────────────────────────────────
   const refLat = userGPS?.lat ?? searchCenter?.lat ?? 0;
@@ -491,7 +596,7 @@ export default function Home() {
               selectedId={selectedId}
               hoveredId={hoveredId}
               onSelectStore={(id) => handleStoreSelect(id, storesWithDistance)}
-              onMoveEnd={handleMoveEndWithRef}
+              onMoveEnd={(lat, lng, zoom, bounds) => handleMoveEndWithRef(lat, lng, zoom, bounds)}
               showSearchAreaButton={showSearchAreaButton}
               onSearchArea={handleSearchArea}
             />

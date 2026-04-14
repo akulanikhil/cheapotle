@@ -10,6 +10,8 @@ const MAP_STYLE = "https://tiles.openfreemap.org/styles/liberty";
 
 export interface MapHandle {
   flyTo(lat: number, lng: number, zoom?: number): void;
+  getVisiblePlacePoints(): Array<{ lat: number; lng: number }>;
+  getBounds(): { north: number; south: number; east: number; west: number } | null;
 }
 
 interface MapProps {
@@ -21,7 +23,7 @@ interface MapProps {
   selectedId: number | null;
   hoveredId: number | null;
   onSelectStore: (id: number) => void;
-  onMoveEnd: (lat: number, lng: number) => void;
+  onMoveEnd: (lat: number, lng: number, zoom: number, bounds: { north: number; south: number; east: number; west: number }) => void;
   showSearchAreaButton: boolean;
   onSearchArea: () => void;
 }
@@ -47,10 +49,36 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
   const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const markersRef = useRef<Record<number, maplibregl.Marker>>({});
 
-  // Expose flyTo via ref
+  // Expose flyTo, getVisiblePlacePoints, getBounds via ref
   useImperativeHandle(ref, () => ({
     flyTo(lat, lng, zoom = 13) {
       mapRef.current?.flyTo({ center: [lng, lat], zoom, duration: 900, essential: true });
+    },
+    getVisiblePlacePoints() {
+      const map = mapRef.current;
+      if (!map) return [];
+      // Query city/town label layers rendered in the current viewport
+      const features = map.queryRenderedFeatures(undefined, {
+        layers: ["label_city", "label_city_capital", "label_town"],
+      });
+      const seen = new Set<string>();
+      const points: Array<{ lat: number; lng: number }> = [];
+      for (const f of features) {
+        if (f.geometry.type !== "Point") continue;
+        const [lng, lat] = f.geometry.coordinates;
+        const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          points.push({ lat, lng });
+        }
+      }
+      return points;
+    },
+    getBounds() {
+      const map = mapRef.current;
+      if (!map) return null;
+      const b = map.getBounds();
+      return { north: b.getNorth(), south: b.getSouth(), east: b.getEast(), west: b.getWest() };
     },
   }));
 
@@ -85,7 +113,15 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
     if (!map) return;
     const handler = () => {
       const { lat, lng } = map.getCenter();
-      onMoveEndRef.current(lat, lng);
+      const zoom = map.getZoom();
+      const b = map.getBounds();
+      const bounds = {
+        north: b.getNorth(),
+        south: b.getSouth(),
+        east: b.getEast(),
+        west: b.getWest(),
+      };
+      onMoveEndRef.current(lat, lng, zoom, bounds);
     };
     map.on("moveend", handler);
     return () => { map.off("moveend", handler); };
