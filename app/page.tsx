@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import { StoreLocation } from "@/app/api/stores/route";
 import { PriceData } from "@/app/api/price/[storeId]/route";
 import { PROTEINS, type Protein } from "@/lib/proteins";
@@ -497,14 +496,12 @@ export default function Home() {
       {appStatus === "idle" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 text-center bg-white">
           <div className="flex flex-col items-center gap-6">
-            <Image
-              src="/logo.png"
-              alt="Cheapotle"
-              width={1053}
-              height={237}
-              className="w-72 sm:w-[420px] h-auto object-contain"
-              priority
-            />
+            <div
+              className="text-7xl sm:text-8xl leading-none select-none"
+              style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
+            >
+              <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+            </div>
             <div>
               <h2
                 className="text-4xl font-bold text-[#3d1500] mb-3 uppercase tracking-wide leading-tight"
@@ -536,14 +533,12 @@ export default function Home() {
       {/* ── Initial loading ───────────────────────────────────────────────── */}
       {isBusy && !showMap && (
         <div className="flex-1 flex flex-col items-center justify-center gap-5 text-center px-6 bg-white">
-          <Image
-            src="/logo.png"
-            alt="Cheapotle"
-            width={1053}
-            height={237}
-            className="w-64 h-auto object-contain opacity-80"
-            priority
-          />
+          <div
+            className="text-5xl leading-none select-none opacity-80"
+            style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
+          >
+            <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+          </div>
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#c41230] animate-spin" />
             <p className="text-gray-500 text-sm font-medium">
@@ -556,13 +551,12 @@ export default function Home() {
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {appStatus === "error" && (
         <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center bg-white">
-          <Image
-            src="/logo.png"
-            alt="Cheapotle"
-            width={1053}
-            height={237}
-            className="w-64 h-auto object-contain opacity-70"
-          />
+          <div
+            className="text-5xl leading-none select-none opacity-70"
+            style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
+          >
+            <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+          </div>
           <p className="text-red-600 font-semibold text-sm max-w-xs">{errorMsg}</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
