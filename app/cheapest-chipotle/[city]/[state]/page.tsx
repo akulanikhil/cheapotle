@@ -84,7 +84,7 @@ function PriceTable({ stores }: { stores: StoreWithPrice[] }) {
                     href={`https://maps.google.com/?q=${encodeURIComponent(store.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="hover:text-[#c41230] transition-colors"
+                    className="hover:text-[#2563eb] transition-colors"
                   >
                     {store.address.split(",")[0]}
                   </a>
@@ -134,7 +134,7 @@ export default async function CityPage({
       {/* Header */}
       <header className="border-b border-gray-200 bg-white sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Link href="/" className="text-[#c41230] font-bold text-lg hover:opacity-80 transition-opacity"
+          <Link href="/" className="text-[#2563eb] font-bold text-lg hover:opacity-80 transition-opacity"
             style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 800, letterSpacing: "0.03em" }}
           >
             Cheapotle
@@ -175,7 +175,7 @@ export default async function CityPage({
         <div className="mt-6 flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 bg-[#c41230] text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-[#a10e27] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#2563eb] text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:bg-[#1d4ed8] transition-colors"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -185,7 +185,7 @@ export default async function CityPage({
           </Link>
           <Link
             href="/cheapest-chipotle-near-me"
-            className="text-sm text-gray-500 hover:text-[#c41230] transition-colors"
+            className="text-sm text-gray-500 hover:text-[#2563eb] transition-colors"
           >
             Use my location instead →
           </Link>
@@ -205,7 +205,7 @@ export default async function CityPage({
                 <Link
                   key={`${n.city}-${n.state}`}
                   href={`/cheapest-chipotle/${n.city}/${n.state}`}
-                  className="inline-flex items-center gap-1 border border-gray-200 rounded-full px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-[#c41230] hover:text-[#c41230] transition-colors bg-white"
+                  className="inline-flex items-center gap-1 border border-gray-200 rounded-full px-3 py-1.5 text-sm font-medium text-gray-700 hover:border-[#2563eb] hover:text-[#2563eb] transition-colors bg-white"
                 >
                   {n.displayCity}, {n.displayState}
                 </Link>
@@ -227,7 +227,7 @@ export default async function CityPage({
               <Link
                 key={`${c.city}-${c.state}`}
                 href={`/cheapest-chipotle/${c.city}/${c.state}`}
-                className="inline-flex items-center border border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-600 hover:border-[#c41230] hover:text-[#c41230] transition-colors bg-white"
+                className="inline-flex items-center border border-gray-200 rounded-full px-3 py-1.5 text-sm text-gray-600 hover:border-[#2563eb] hover:text-[#2563eb] transition-colors bg-white"
               >
                 {c.displayCity}, {c.displayState}
               </Link>

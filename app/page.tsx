@@ -12,7 +12,7 @@ import ProteinSelector from "./components/ProteinSelector";
 import StoreDetailPanel from "./components/StoreDetailPanel";
 import type { MapHandle } from "./components/Map";
 
-const ChipotleMap = dynamic(() => import("./components/Map"), { ssr: false });
+const RestaurantMap = dynamic(() => import("./components/Map"), { ssr: false });
 
 type SortMode = "price" | "distance";
 type AppStatus = "idle" | "locating" | "loading" | "success" | "error";
@@ -159,7 +159,7 @@ export default function Home() {
       try {
         const res = await fetch(`/api/stores?lat=${location.lat}&lng=${location.lng}`);
         if (res.status === 404) {
-          setErrorMsg("No Chipotle locations found in this area.");
+          setErrorMsg("No locations found in this area.");
           setAppStatus("error");
           return;
         }
@@ -266,7 +266,7 @@ export default function Home() {
       }
 
       if (allStores.length === 0) {
-        setErrorMsg("No Chipotle locations found in this area.");
+        setErrorMsg("No locations found in this area.");
         setAppStatus("error");
         return;
       }
@@ -467,7 +467,7 @@ export default function Home() {
               <button
                 onClick={handleGetLocation}
                 disabled={isBusy}
-                className="flex items-center gap-2 bg-[#c41230] hover:bg-[#a30e28] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-sm transition-colors disabled:opacity-60 whitespace-nowrap uppercase tracking-wide"
+                className="flex items-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-bold px-4 py-2.5 rounded-full shadow-sm transition-colors disabled:opacity-60 whitespace-nowrap uppercase tracking-wide"
               >
                 {isBusy ? (
                   <>
@@ -500,24 +500,24 @@ export default function Home() {
               className="text-7xl sm:text-8xl leading-none select-none"
               style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
             >
-              <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+              <span className="text-gray-900">cheap</span><span className="text-[#2563eb]">otle</span>
             </div>
             <div>
               <h2
-                className="text-4xl font-bold text-[#3d1500] mb-3 uppercase tracking-wide leading-tight"
+                className="text-4xl font-bold text-gray-800 mb-3 uppercase tracking-wide leading-tight"
                 style={{ fontFamily: "var(--font-barlow-condensed)" }}
               >
                 Find the Cheapest Bowl Near You
               </h2>
               <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed font-medium">
-                Real-time prices from every Chipotle nearby —<br />compare all proteins, sorted by cost.
+                Real-time prices from every location nearby —<br />compare all proteins, sorted by cost.
               </p>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 items-center">
             <button
               onClick={handleGetLocation}
-              className="flex items-center justify-center gap-2 bg-[#c41230] hover:bg-[#a30e28] text-white font-bold py-3 px-8 rounded-full shadow-md transition-colors text-sm uppercase tracking-wider"
+              className="flex items-center justify-center gap-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-bold py-3 px-8 rounded-full shadow-md transition-colors text-sm uppercase tracking-wider"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -527,6 +527,9 @@ export default function Home() {
             </button>
             <span className="text-sm text-gray-400 font-medium">or search a city above ↑</span>
           </div>
+          <p className="text-xs text-gray-400 max-w-xs">
+            Independent price comparison tool. Not affiliated with any restaurant chain.
+          </p>
         </div>
       )}
 
@@ -537,12 +540,12 @@ export default function Home() {
             className="text-5xl leading-none select-none opacity-80"
             style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
           >
-            <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+            <span className="text-gray-900">cheap</span><span className="text-[#2563eb]">otle</span>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#c41230] animate-spin" />
+            <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#2563eb] animate-spin" />
             <p className="text-gray-500 text-sm font-medium">
-              {appStatus === "locating" ? "Getting your location…" : "Finding nearby Chipotles…"}
+              {appStatus === "locating" ? "Getting your location…" : "Finding nearby locations…"}
             </p>
           </div>
         </div>
@@ -555,13 +558,13 @@ export default function Home() {
             className="text-5xl leading-none select-none opacity-70"
             style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 900, letterSpacing: "-0.01em" }}
           >
-            <span className="text-gray-900">cheap</span><span className="text-[#c41230]">otle</span>
+            <span className="text-gray-900">cheap</span><span className="text-[#2563eb]">otle</span>
           </div>
           <p className="text-red-600 font-semibold text-sm max-w-xs">{errorMsg}</p>
           <div className="flex flex-col sm:flex-row gap-2">
             <button
               onClick={handleGetLocation}
-              className="bg-[#c41230] hover:bg-[#a30e28] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors uppercase tracking-wide"
+              className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-bold px-6 py-2.5 rounded-full transition-colors uppercase tracking-wide"
             >
               Try My Location
             </button>
@@ -580,7 +583,7 @@ export default function Home() {
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Map */}
           <div className="relative shrink-0" style={{ height: "42vh" }}>
-            <ChipotleMap
+            <RestaurantMap
               ref={mapRef}
               userLat={mapUserLat}
               userLng={mapUserLng}
@@ -598,7 +601,7 @@ export default function Home() {
             {/* Re-load overlay */}
             {isBusy && (
               <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center z-10">
-                <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#c41230] animate-spin" />
+                <div className="w-10 h-10 rounded-full border-4 border-gray-100 border-t-[#2563eb] animate-spin" />
               </div>
             )}
           </div>
@@ -615,7 +618,7 @@ export default function Home() {
                     <span className="text-gray-400">
                       {" · "}
                       <span className="inline-flex items-center gap-1">
-                        <svg className="animate-spin h-3 w-3 text-[#3d1500]" viewBox="0 0 24 24" fill="none">
+                        <svg className="animate-spin h-3 w-3 text-gray-800" viewBox="0 0 24 24" fill="none">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                         </svg>
@@ -637,7 +640,7 @@ export default function Home() {
                     onClick={() => setSortMode(mode)}
                     className={`px-3 py-1 rounded-md text-xs uppercase tracking-wide transition-all ${
                       sortMode === mode
-                        ? "bg-[#c41230] text-white shadow-sm"
+                        ? "bg-[#2563eb] text-white shadow-sm"
                         : "text-gray-500 hover:text-gray-700"
                     }`}
                     style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 700 }}

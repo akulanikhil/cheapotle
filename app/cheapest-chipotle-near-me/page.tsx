@@ -30,7 +30,7 @@ export default function NearMePage() {
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
           <Link
             href="/"
-            className="text-[#c41230] font-bold text-lg hover:opacity-80 transition-opacity"
+            className="text-[#2563eb] font-bold text-lg hover:opacity-80 transition-opacity"
             style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 800, letterSpacing: "0.03em" }}
           >
             Cheapotle
@@ -69,11 +69,11 @@ export default function NearMePage() {
               <Link
                 key={`${c.city}-${c.state}`}
                 href={`/cheapest-chipotle/${c.city}/${c.state}`}
-                className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:border-[#c41230] hover:text-[#c41230] transition-colors bg-white group"
+                className="flex items-center justify-between border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 hover:border-[#2563eb] hover:text-[#2563eb] transition-colors bg-white group"
               >
                 <span>{c.displayCity}, {c.displayState}</span>
                 <svg
-                  className="h-3.5 w-3.5 text-gray-300 group-hover:text-[#c41230] transition-colors"
+                  className="h-3.5 w-3.5 text-gray-300 group-hover:text-[#2563eb] transition-colors"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

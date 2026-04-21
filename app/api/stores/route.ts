@@ -126,7 +126,7 @@ export async function GET(request: Request) {
     });
 
     if (allStores.length === 0) {
-      return NextResponse.json({ error: "No Chipotle locations found near you." }, { status: 404 });
+      return NextResponse.json({ error: "No locations found near you." }, { status: 404 });
     }
 
     cache.set(key, { stores: allStores, ts: Date.now() });

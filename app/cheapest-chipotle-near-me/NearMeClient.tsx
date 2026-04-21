@@ -33,7 +33,7 @@ export default function NearMeClient() {
           const { stores: rawStores } = await storesRes.json();
 
           if (!rawStores?.length) {
-            setErrorMsg("No Chipotle locations found near you.");
+            setErrorMsg("No locations found near you.");
             setStatus("error");
             return;
           }
@@ -89,7 +89,7 @@ export default function NearMeClient() {
         <div className="space-y-3">
           <button
             onClick={handleLocate}
-            className="inline-flex items-center gap-2 bg-[#c41230] text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-[#a10e27] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#2563eb] text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-[#1d4ed8] transition-colors"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -100,7 +100,7 @@ export default function NearMeClient() {
           {errorMsg && <p className="text-red-500 text-sm">{errorMsg}</p>}
           <p className="text-xs text-gray-400">
             Or{" "}
-            <Link href="/" className="text-[#c41230] hover:underline">
+            <Link href="/" className="text-[#2563eb] hover:underline">
               open the live map
             </Link>{" "}
             to compare prices interactively.
@@ -162,7 +162,7 @@ export default function NearMeClient() {
                             href={`https://maps.google.com/?q=${encodeURIComponent(store.address)}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hover:text-[#c41230] transition-colors"
+                            className="hover:text-[#2563eb] transition-colors"
                           >
                             {store.address.split(",")[0]}
                           </a>
@@ -193,7 +193,7 @@ export default function NearMeClient() {
           <div className="mt-4 flex gap-3">
             <Link
               href="/"
-              className="text-sm text-[#c41230] hover:underline font-medium"
+              className="text-sm text-[#2563eb] hover:underline font-medium"
             >
               Open live map →
             </Link>

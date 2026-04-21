@@ -28,7 +28,7 @@ interface MapProps {
   onSearchArea: () => void;
 }
 
-const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
+const RestaurantMap = forwardRef<MapHandle, MapProps>(function RestaurantMap(
   {
     userLat,
     userLng,
@@ -222,7 +222,7 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
             onClick={onSearchArea}
             className="pointer-events-auto flex items-center gap-1.5 bg-white text-gray-800 text-xs font-semibold px-4 py-2 rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all"
           >
-            <svg className="h-3.5 w-3.5 text-[#3d1500]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 115 11a6 6 0 0112 0z" />
             </svg>
             Search this area
@@ -233,4 +233,4 @@ const ChipotleMap = forwardRef<MapHandle, MapProps>(function ChipotleMap(
   );
 });
 
-export default ChipotleMap;
+export default RestaurantMap;

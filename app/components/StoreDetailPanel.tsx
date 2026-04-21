@@ -39,7 +39,7 @@ function ProteinTile({
       onClick={onClick}
       className={`relative rounded-xl border-2 p-3 flex flex-col items-center gap-2 transition-all hover:shadow-md cursor-pointer text-center ${
         isSelected
-          ? "border-[#c41230] bg-[#fff5f7] shadow-sm"
+          ? "border-[#2563eb] bg-[#eff6ff] shadow-sm"
           : "border-gray-200 bg-white hover:border-gray-300"
       }`}
     >
@@ -71,7 +71,7 @@ function ProteinTile({
       {isLoading ? (
         <div className="h-4 w-12 bg-gray-100 rounded animate-pulse" />
       ) : price?.isLive ? (
-        <span className={`text-sm font-black tracking-tight ${isSelected ? "text-[#c41230]" : "text-gray-800"}`}>
+        <span className={`text-sm font-black tracking-tight ${isSelected ? "text-[#2563eb]" : "text-gray-800"}`}>
           ${price.price.toFixed(2)}
         </span>
       ) : (
@@ -158,7 +158,7 @@ export default function StoreDetailPanel({
                     href={`https://maps.google.com/?q=${encodeURIComponent(store.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#c41230] font-medium mt-0.5 truncate transition-colors group"
+                    className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#2563eb] font-medium mt-0.5 truncate transition-colors group"
                   >
                     <svg className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />

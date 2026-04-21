@@ -16,7 +16,7 @@ export default function ProteinSelector({ selected, onChange }: ProteinSelectorP
           onClick={() => onChange(p)}
           className={`shrink-0 px-4 py-1.5 rounded-full text-xs uppercase tracking-wider transition-all ${
             selected === p
-              ? "bg-[#c41230] text-white shadow-sm"
+              ? "bg-[#2563eb] text-white shadow-sm"
               : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
           }`}
           style={{ fontFamily: "var(--font-barlow-condensed)", fontWeight: 700, fontSize: "0.8rem" }}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Barlow_Condensed } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import Footer from "./components/Footer";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -18,8 +19,8 @@ const barlowCondensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Cheapotle — Find the Cheapest Chipotle Near You",
-  description: "Compare Chipotle bowl prices at nearby locations on a live map.",
+  title: "Cheapotle — Compare Burrito Bowl Prices Near You",
+  description: "Compare menu prices across restaurant locations on a live map. Find the best deal near you. Independent price comparison tool.",
 };
 
 export default function RootLayout({
@@ -32,8 +33,9 @@ export default function RootLayout({
       lang="en"
       className={`h-full antialiased ${montserrat.variable} ${barlowCondensed.variable}`}
     >
-      <body className="h-full">
-        {children}
+      <body className="h-full flex flex-col">
+        <div className="flex-1 min-h-0">{children}</div>
+        <Footer />
         <Analytics />
       </body>
     </html>

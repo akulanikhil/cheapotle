@@ -42,9 +42,9 @@ export default function LocationCard({
       onMouseLeave={onHoverEnd}
       className={`w-full text-left flex gap-0 rounded-2xl overflow-hidden shadow-sm transition-all duration-200 border-2 focus:outline-none ${
         isSelected
-          ? "border-[#c41230] shadow-lg scale-[1.01]"
+          ? "border-[#2563eb] shadow-lg scale-[1.01]"
           : isHovered
-          ? "border-[#c41230]/30 shadow-md scale-[1.005]"
+          ? "border-[#2563eb]/30 shadow-md scale-[1.005]"
           : isCheapest
           ? "border-green-400 shadow-green-100"
           : "border-transparent hover:border-gray-200 hover:shadow-md"
@@ -88,7 +88,7 @@ export default function LocationCard({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#c41230] font-medium mt-0.5 truncate transition-colors group"
+            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-[#2563eb] font-medium mt-0.5 truncate transition-colors group"
           >
             <svg className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
