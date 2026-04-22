@@ -653,7 +653,7 @@ export default function Home() {
           </div>
 
           {/* Card list */}
-          <div ref={listRef} className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+          <div ref={listRef} className="flex-1 overflow-y-auto px-4 pb-24 space-y-3">
             {sorted.map((store, index) => (
               <div
                 key={store.id}
